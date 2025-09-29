@@ -1,0 +1,26 @@
+{
+  "name": "existential-npc-generator",
+  "version": "1.0.0",
+  "description": "A FoundryVTT module for generating NPCs with existential depth and meaning.",
+  "main": "scripts/main.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rimraf scripts/*.js scripts/*.js.map"
+  },
+  "devDependencies": {
+    "@league-of-foundry-developers/foundry-vtt-types": "^11.315.0",
+    "@types/node": "^20.0.0",
+    "rimraf": "^5.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "foundry-vtt",
+    "module",
+    "npc",
+    "generator",
+    "typescript"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}

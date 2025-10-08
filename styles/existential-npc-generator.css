@@ -1,0 +1,71 @@
+/* Styles for the NPC Generator */
+
+.npc-generator-btn {
+    margin-left: 8px;
+    padding: 4px 8px;
+    background: #191813;
+    border: 1px solid #782e22;
+    color: #f0f0e0;
+    font-size: 11px;
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.npc-generator-btn:hover {
+    background: #782e22;
+    box-shadow: 0 0 5px rgba(120, 46, 34, 0.5);
+}
+
+.npc-generator-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.npc-generator-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.npc-generator-form label {
+    font-weight: bold;
+    color: #782e22;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.npc-generator-form input,
+.npc-generator-form textarea,
+.npc-generator-form select {
+    padding: 6px 8px;
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid #782e22;
+    border-radius: 3px;
+    color: #f0f0e0;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.npc-generator-form input:focus,
+.npc-generator-form textarea:focus,
+.npc-generator-form select:focus {
+    outline: none;
+    border-color: #a03828;
+    box-shadow: 0 0 5px rgba(120, 46, 34, 0.3);
+}
+
+.npc-generator-form textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.npc-generator-form select {
+    cursor: pointer;
+}
+
+.npc-generator-form select option {
+    background: #191813;
+    color: #f0f0e0;
+}

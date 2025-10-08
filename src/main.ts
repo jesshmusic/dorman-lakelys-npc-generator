@@ -1,31 +1,31 @@
-// Main entry point for the Existential NPC Generator module
-import { ExistentialNPCGenerator } from './generator/ExistentialNPCGenerator.js';
+// Main entry point for the NPC Generator module
+import { NPCGenerator } from './generator/ExistentialNPCGenerator.js';
 import { registerSettings } from './settings/ModuleSettings.js';
-import { ExistentialNPCGeneratorUI } from './ui/ExistentialNPCGeneratorUI.js';
+import { NPCGeneratorUI } from './ui/ExistentialNPCGeneratorUI.js';
 
 // Module constants
-const MODULE_ID = 'existential-npc-generator';
+const MODULE_ID = 'em-npc-generator';
 
 // Initialize the module when Foundry is ready
 Hooks.once('init', async () => {
-    console.log(`${MODULE_ID} | Initializing Existential NPC Generator`);
+    console.log(`${MODULE_ID} | Initializing NPC Generator`);
 
     // Register module settings
     registerSettings();
 
     // Register the generator in the global scope for API access
-    (globalThis as any).ExistentialNPCGenerator = {
-        generator: new ExistentialNPCGenerator(),
-        ui: ExistentialNPCGeneratorUI
+    (globalThis as any).NPCGenerator = {
+        generator: new NPCGenerator(),
+        ui: NPCGeneratorUI
     };
 });
 
 // Add UI elements when ready
 Hooks.once('ready', async () => {
-    console.log(`${MODULE_ID} | Existential NPC Generator ready`);
+    console.log(`${MODULE_ID} | NPC Generator ready`);
 
     // Add button to actor directory
-    ExistentialNPCGeneratorUI.addGeneratorButton();
+    NPCGeneratorUI.addGeneratorButton();
 });
 
 // Handle canvas ready for any canvas-specific functionality

@@ -16,9 +16,7 @@
     "removeComments": false,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "types": [
-      "@league-of-foundry-developers/foundry-vtt-types"
-    ]
+    "jsx": "react-jsx"
   },
   "include": [
     "src/**/*"

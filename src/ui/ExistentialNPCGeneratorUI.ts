@@ -274,6 +274,38 @@ export class NPCGeneratorUI {
                 return;
             }
 
+            // Create the actor in the world first (with all items)
+            // This uses the existing working code
+            const actor = await this.createActorWithItems(npc);
+
+            if (!actor) {
+                ui.notifications?.error("Failed to create NPC");
+                return;
+            }
+
+            // Import the completed actor into the compendium
+            const compendiumActor = await pack.importDocument(actor);
+
+            if (compendiumActor) {
+                ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating}) in ${pack.title}`);
+
+                // Delete the temporary world actor
+                await actor.delete();
+
+                // Import back to world and open sheet for viewing/editing
+                const worldActor = await game.actors?.importFromCompendium(pack, compendiumActor.id);
+                if (worldActor) {
+                    worldActor.sheet?.render(true);
+                }
+            }
+        } catch (error) {
+            console.error("Error creating NPC in compendium:", error);
+            ui.notifications?.error("Failed to create NPC in compendium");
+        }
+    }
+
+    private static async createActorWithItems(npc: NPC): Promise<any> {
+        try {
             // Build skills object
             const skills: any = {};
             npc.skills.forEach(skill => {
@@ -342,8 +374,7 @@ export class NPCGeneratorUI {
                 }
             };
 
-            // Create the actor document in the compendium
-            const actor = await pack.documentClass.create(actorData, { pack: pack.collection });
+            const actor = await Actor.create(actorData);
 
             if (actor) {
                 // Add equipment, features, class features, and spells
@@ -351,18 +382,12 @@ export class NPCGeneratorUI {
                 await this.addFeatures(actor, npc);
                 await this.addClassFeatures(actor, npc);
                 await this.addSpells(actor, npc);
-
-                ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating}) in ${pack.title}`);
-
-                // Import the actor from compendium to world to open the sheet
-                const worldActor = await game.actors?.importFromCompendium(pack, actor.id);
-                if (worldActor) {
-                    worldActor.sheet?.render(true);
-                }
             }
+
+            return actor;
         } catch (error) {
-            console.error("Error creating NPC in compendium:", error);
-            ui.notifications?.error("Failed to create NPC in compendium");
+            console.error("Error creating actor with items:", error);
+            return null;
         }
     }
 

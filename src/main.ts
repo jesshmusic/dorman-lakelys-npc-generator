@@ -23,8 +23,10 @@ Hooks.once('init', async () => {
 // Add UI elements when ready
 Hooks.once('ready', async () => {
     console.log(`${MODULE_ID} | NPC Generator ready`);
+});
 
-    // Add button to actor directory
+// Re-add button every time the actors directory renders
+Hooks.on('renderActorDirectory', async (app: any, html: any) => {
     NPCGeneratorUI.addGeneratorButton();
 });
 

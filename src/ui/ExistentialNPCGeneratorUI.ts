@@ -35,12 +35,42 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
     };
 
     async _prepareContext(options: any): Promise<any> {
+        // Get all actor compendiums available to the user
+        const compendiums = Array.from(game.packs.values())
+            .filter((pack: any) => pack.documentName === 'Actor' && !pack.locked)
+            .map((pack: any) => ({
+                id: pack.collection,
+                title: pack.title
+            }));
+
         return {
             species: NPCGenerator.SPECIES,
             alignments: NPCGenerator.ALIGNMENTS,
             challengeRatings: NPCGenerator.CHALLENGE_RATINGS,
-            classes: NPCGenerator.CLASSES
+            classes: NPCGenerator.CLASSES,
+            compendiums
         };
+    }
+
+    _onRender(context: any, options: any): void {
+        super._onRender(context, options);
+
+        // Set up destination select change handler
+        const destinationSelect = this.element.querySelector('#npc-destination') as HTMLSelectElement;
+        const newCompendiumGroup = this.element.querySelector('#new-compendium-name-group') as HTMLElement;
+        const newCompendiumInput = this.element.querySelector('#new-compendium-name') as HTMLInputElement;
+
+        if (destinationSelect && newCompendiumGroup) {
+            destinationSelect.addEventListener('change', () => {
+                if (destinationSelect.value === 'new-compendium') {
+                    newCompendiumGroup.style.display = 'block';
+                    newCompendiumInput.required = true;
+                } else {
+                    newCompendiumGroup.style.display = 'none';
+                    newCompendiumInput.required = false;
+                }
+            });
+        }
     }
 
     static async onCreateNPC(event: Event, target: HTMLElement) {
@@ -57,14 +87,32 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
             class: formData.get('class') as string
         };
 
+        const destination = formData.get('destination') as string;
+        const newCompendiumName = formData.get('newCompendiumName') as string;
+
         if (!inputData.name || !inputData.description) {
             ui.notifications?.warn('Please fill in all required fields');
             return;
         }
 
+        if (destination === 'new-compendium' && !newCompendiumName) {
+            ui.notifications?.warn('Please enter a compendium name');
+            return;
+        }
+
         // Generate full NPC with stats
         const npc = NPCGenerator.generateNPC(inputData);
-        await NPCGeneratorUI.createActor(npc);
+
+        // Handle different destinations
+        if (destination === 'world') {
+            await NPCGeneratorUI.createActor(npc);
+        } else if (destination === 'new-compendium') {
+            await NPCGeneratorUI.createActorInNewCompendium(npc, newCompendiumName);
+        } else if (destination.startsWith('compendium:')) {
+            const compendiumId = destination.replace('compendium:', '');
+            await NPCGeneratorUI.createActorInCompendium(npc, compendiumId);
+        }
+
         // @ts-ignore
         this.close();
     }
@@ -86,12 +134,21 @@ export class NPCGeneratorUI {
         const header = actorsTab.querySelector('.directory-header');
         if (!header) return;
 
+        // Check if button already exists to prevent duplicates
+        if (header.querySelector('.npc-generator-btn')) return;
+
         const button = document.createElement('button');
         button.innerHTML = '<i class="fas fa-user-plus"></i> Generate NPC';
         button.className = 'npc-generator-btn';
         button.onclick = () => this.showGeneratorDialog();
 
-        header.appendChild(button);
+        // Insert before the search/filter element
+        const searchFilter = header.querySelector('.header-search, .filter');
+        if (searchFilter) {
+            header.insertBefore(button, searchFilter);
+        } else {
+            header.appendChild(button);
+        }
     }
 
     static async showGeneratorDialog(): Promise<void> {
@@ -185,6 +242,127 @@ export class NPCGeneratorUI {
         } catch (error) {
             console.error("Error creating NPC:", error);
             ui.notifications?.error("Failed to create NPC");
+        }
+    }
+
+    static async createActorInNewCompendium(npc: NPC, compendiumName: string): Promise<void> {
+        try {
+            // Create a new compendium
+            const compendium = await CompendiumCollection.createCompendium({
+                label: compendiumName,
+                type: 'Actor',
+                name: compendiumName.toLowerCase().replace(/\s+/g, '-'),
+                package: 'world'
+            });
+
+            ui.notifications?.info(`Created compendium: ${compendiumName}`);
+
+            // Create the actor in the new compendium
+            await this.createActorInCompendium(npc, compendium.collection);
+
+        } catch (error) {
+            console.error("Error creating compendium:", error);
+            ui.notifications?.error("Failed to create compendium");
+        }
+    }
+
+    static async createActorInCompendium(npc: NPC, compendiumId: string): Promise<void> {
+        try {
+            const pack = game.packs.get(compendiumId);
+            if (!pack) {
+                ui.notifications?.error(`Compendium ${compendiumId} not found`);
+                return;
+            }
+
+            // Build skills object
+            const skills: any = {};
+            npc.skills.forEach(skill => {
+                skills[skill] = { value: 1, ability: this.getSkillAbility(skill) };
+            });
+
+            // Build saves object
+            const saves: any = {
+                str: { proficient: npc.saves.includes('str') ? 1 : 0 },
+                dex: { proficient: npc.saves.includes('dex') ? 1 : 0 },
+                con: { proficient: npc.saves.includes('con') ? 1 : 0 },
+                int: { proficient: npc.saves.includes('int') ? 1 : 0 },
+                wis: { proficient: npc.saves.includes('wis') ? 1 : 0 },
+                cha: { proficient: npc.saves.includes('cha') ? 1 : 0 }
+            };
+
+            const actorData = {
+                name: npc.name,
+                type: "npc",
+                system: {
+                    abilities: {
+                        str: { value: npc.abilities.str, proficient: saves.str.proficient },
+                        dex: { value: npc.abilities.dex, proficient: saves.dex.proficient },
+                        con: { value: npc.abilities.con, proficient: saves.con.proficient },
+                        int: { value: npc.abilities.int, proficient: saves.int.proficient },
+                        wis: { value: npc.abilities.wis, proficient: saves.wis.proficient },
+                        cha: { value: npc.abilities.cha, proficient: saves.cha.proficient }
+                    },
+                    attributes: {
+                        hp: {
+                            value: npc.hp,
+                            max: npc.hp
+                        },
+                        ac: {
+                            calc: "default"
+                        },
+                        movement: {
+                            walk: npc.speed.walk,
+                            fly: npc.speed.fly || 0,
+                            climb: npc.speed.climb || 0,
+                            swim: npc.speed.swim || 0,
+                            units: "ft"
+                        }
+                    },
+                    details: {
+                        cr: npc.challengeRating,
+                        type: {
+                            value: npc.species.toLowerCase()
+                        },
+                        alignment: npc.alignment.toLowerCase().replace(' ', ''),
+                        biography: {
+                            value: this.formatBiography(npc)
+                        }
+                    },
+                    skills,
+                    traits: {
+                        languages: {
+                            value: new Set(npc.languages),
+                            custom: ""
+                        }
+                    },
+                    currency: npc.currency
+                },
+                prototypeToken: {
+                    name: npc.name
+                }
+            };
+
+            // Create the actor document in the compendium
+            const actor = await pack.documentClass.create(actorData, { pack: pack.collection });
+
+            if (actor) {
+                // Add equipment, features, class features, and spells
+                await this.addEquipment(actor, npc);
+                await this.addFeatures(actor, npc);
+                await this.addClassFeatures(actor, npc);
+                await this.addSpells(actor, npc);
+
+                ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating}) in ${pack.title}`);
+
+                // Import the actor from compendium to world to open the sheet
+                const worldActor = await game.actors?.importFromCompendium(pack, actor.id);
+                if (worldActor) {
+                    worldActor.sheet?.render(true);
+                }
+            }
+        } catch (error) {
+            console.error("Error creating NPC in compendium:", error);
+            ui.notifications?.error("Failed to create NPC in compendium");
         }
     }
 

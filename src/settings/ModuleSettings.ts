@@ -1,5 +1,5 @@
 // Module settings configuration
-const MODULE_ID = 'em-npc-generator';
+const MODULE_ID = 'dorman-lakelys-npc-generator';
 
 export function registerSettings(): void {
     game.settings.register(MODULE_ID, 'enableExistentialThemes', {

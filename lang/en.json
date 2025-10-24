@@ -1,5 +1,5 @@
 {
-    "existential-npc-generator": {
+    "dorman-lakelys-npc-generator": {
         "settings": {
             "enableExistentialThemes": {
                 "name": "Enable Deep Existential Themes",
@@ -15,12 +15,12 @@
             }
         },
         "ui": {
-            "generateButton": "Generate Existential NPC",
-            "dialogTitle": "Existential NPC Generator",
+            "generateButton": "Generate NPC",
+            "dialogTitle": "Dorman Lakely's NPC Generator",
             "createActor": "Create Actor",
             "regenerate": "Regenerate",
             "close": "Close",
-            "npcCreated": "Created existential NPC: {name}",
+            "npcCreated": "Created NPC: {name}",
             "npcCreationError": "Failed to create NPC"
         },
         "fields": {

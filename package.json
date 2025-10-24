@@ -1,7 +1,7 @@
 {
-  "name": "existential-npc-generator",
+  "name": "dorman-lakelys-npc-generator",
   "version": "1.0.0",
-  "description": "A FoundryVTT module for generating NPCs with existential depth and meaning.",
+  "description": "A FoundryVTT module for generating NPCs with depth and meaning.",
   "main": "scripts/main.js",
   "scripts": {
     "build": "vite build",
@@ -23,6 +23,6 @@
     "generator",
     "typescript"
   ],
-  "author": "Your Name",
+  "author": "jesshmusic",
   "license": "MIT"
 }

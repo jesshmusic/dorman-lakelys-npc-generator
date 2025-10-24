@@ -1,6 +1,6 @@
-# Existential NPC Generator
+# Dorman Lakely's NPC Generator
 
-A FoundryVTT module that generates NPCs with deep existential themes, philosophical depth, and complex inner lives.
+A FoundryVTT module that generates NPCs with philosophical depth and complex inner lives.
 
 ## Features
 
@@ -12,7 +12,7 @@ A FoundryVTT module that generates NPCs with deep existential themes, philosophi
 
 ## Installation
 
-1. Copy the `existential-npc-generator` folder to your FoundryVTT `Data/modules` directory
+1. Copy the `dorman-lakelys-npc-generator` folder to your FoundryVTT `Data/modules` directory
 2. Install dependencies: `npm install`
 3. Build the TypeScript: `npm run build`
 4. Enable the module in FoundryVTT
@@ -37,7 +37,7 @@ npm run dev
 
 ### Project Structure
 ```
-existential-npc-generator/
+dorman-lakelys-npc-generator/
 ├── src/                          # TypeScript source files
 │   ├── main.ts                   # Main module entry point
 │   ├── generator/                # NPC generation logic
@@ -55,7 +55,7 @@ existential-npc-generator/
 ## Usage
 
 1. Navigate to the Actors directory in FoundryVTT
-2. Click the "Generate Existential NPC" button in the header
+2. Click the "Generate NPC" button in the header
 3. Review the generated NPC's existential profile
 4. Click "Create Actor" to add them to your world, or "Regenerate" for a new NPC
 

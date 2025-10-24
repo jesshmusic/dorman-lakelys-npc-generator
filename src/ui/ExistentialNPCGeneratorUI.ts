@@ -30,7 +30,7 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
 
     static PARTS = {
         form: {
-            template: 'modules/em-npc-generator/templates/npc-form.html'
+            template: 'modules/dorman-lakelys-npc-generator/templates/npc-form.html'
         }
     };
 

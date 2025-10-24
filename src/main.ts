@@ -4,7 +4,7 @@ import { registerSettings } from './settings/ModuleSettings.js';
 import { NPCGeneratorUI } from './ui/ExistentialNPCGeneratorUI.js';
 
 // Module constants
-const MODULE_ID = 'em-npc-generator';
+const MODULE_ID = 'dorman-lakelys-npc-generator';
 
 // Initialize the module when Foundry is ready
 Hooks.once('init', async () => {

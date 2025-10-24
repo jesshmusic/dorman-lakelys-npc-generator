@@ -1,12 +1,15 @@
 {
   "name": "dorman-lakelys-npc-generator",
   "version": "1.0.0",
-  "description": "A FoundryVTT module for generating NPCs with depth and meaning.",
+  "description": "A FoundryVTT module for generating NPCs.",
   "main": "scripts/main.js",
   "scripts": {
     "build": "vite build",
     "dev": "vite build --watch",
-    "clean": "rimraf scripts/*"
+    "clean": "rimraf scripts/*",
+    "release:patch": "node scripts/release.js patch",
+    "release:minor": "node scripts/release.js minor",
+    "release:major": "node scripts/release.js major"
   },
   "devDependencies": {
     "@league-of-foundry-developers/foundry-vtt-types": "^12.331.0",

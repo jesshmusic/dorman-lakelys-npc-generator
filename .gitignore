@@ -1,5 +1,6 @@
 node_modules/
 scripts/*.js
+!scripts/release.js
 scripts/*.js.map
 scripts/*.d.ts
 *.log

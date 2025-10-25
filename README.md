@@ -20,10 +20,12 @@ A FoundryVTT module that generates NPCs with philosophical depth and complex inn
 ## Development
 
 ### Prerequisites
+
 - Node.js (version 18 or higher)
 - npm or yarn
 
 ### Setup
+
 ```bash
 # Install dependencies
 npm install
@@ -36,6 +38,7 @@ npm run dev
 ```
 
 ### Project Structure
+
 ```
 dorman-lakelys-npc-generator/
 ├── src/                          # TypeScript source files
@@ -62,6 +65,7 @@ dorman-lakelys-npc-generator/
 ## Generated NPC Properties
 
 Each NPC includes:
+
 - **Basic Info**: Name, age, occupation
 - **Existential Crisis**: A fundamental question or struggle they face
 - **Philosophy**: Their worldview and beliefs
@@ -74,6 +78,7 @@ Each NPC includes:
 ## Configuration
 
 The module includes several settings to customize NPC generation:
+
 - **Enable Deep Existential Themes**: Toggle profound existential content
 - **Include Personal Contradictions**: Add internal conflicts to NPCs
 - **Philosophical Complexity Level**: Control the depth of philosophical themes

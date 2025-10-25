@@ -1,39 +1,39 @@
 {
-    "dorman-lakelys-npc-generator": {
-        "settings": {
-            "enableExistentialThemes": {
-                "name": "Enable Deep Existential Themes",
-                "hint": "When enabled, NPCs will have more profound existential crises and philosophical depth."
-            },
-            "includeContradictions": {
-                "name": "Include Personal Contradictions",
-                "hint": "When enabled, NPCs will have internal contradictions that make them more complex."
-            },
-            "philosophicalComplexity": {
-                "name": "Philosophical Complexity Level",
-                "hint": "Controls the depth of philosophical themes in generated NPCs."
-            }
-        },
-        "ui": {
-            "generateButton": "Generate NPC",
-            "dialogTitle": "Dorman Lakely's NPC Generator",
-            "createActor": "Create Actor",
-            "regenerate": "Regenerate",
-            "close": "Close",
-            "npcCreated": "Created NPC: {name}",
-            "npcCreationError": "Failed to create NPC"
-        },
-        "fields": {
-            "name": "Name",
-            "age": "Age",
-            "occupation": "Occupation",
-            "existentialCrisis": "Existential Crisis",
-            "philosophy": "Philosophy",
-            "motivation": "Motivation",
-            "fear": "Fear",
-            "hope": "Hope",
-            "contradiction": "Contradiction",
-            "backstory": "Backstory"
-        }
+  "dorman-lakelys-npc-generator": {
+    "settings": {
+      "enableExistentialThemes": {
+        "name": "Enable Deep Existential Themes",
+        "hint": "When enabled, NPCs will have more profound existential crises and philosophical depth."
+      },
+      "includeContradictions": {
+        "name": "Include Personal Contradictions",
+        "hint": "When enabled, NPCs will have internal contradictions that make them more complex."
+      },
+      "philosophicalComplexity": {
+        "name": "Philosophical Complexity Level",
+        "hint": "Controls the depth of philosophical themes in generated NPCs."
+      }
+    },
+    "ui": {
+      "generateButton": "Generate NPC",
+      "dialogTitle": "Dorman Lakely's NPC Generator",
+      "createActor": "Create Actor",
+      "regenerate": "Regenerate",
+      "close": "Close",
+      "npcCreated": "Created NPC: {name}",
+      "npcCreationError": "Failed to create NPC"
+    },
+    "fields": {
+      "name": "Name",
+      "age": "Age",
+      "occupation": "Occupation",
+      "existentialCrisis": "Existential Crisis",
+      "philosophy": "Philosophy",
+      "motivation": "Motivation",
+      "fear": "Fear",
+      "hope": "Hope",
+      "contradiction": "Contradiction",
+      "backstory": "Backstory"
     }
+  }
 }

@@ -2,13 +2,19 @@
 import { NPCGenerator } from './generator/ExistentialNPCGenerator.js';
 import { registerSettings } from './settings/ModuleSettings.js';
 import { NPCGeneratorUI } from './ui/ExistentialNPCGeneratorUI.js';
+import packageInfo from '../package.json';
 
 // Module constants
 const MODULE_ID = 'dorman-lakelys-npc-generator';
 
 // Initialize the module when Foundry is ready
 Hooks.once('init', async () => {
-  console.log(`${MODULE_ID} | Initializing NPC Generator`);
+  // Module initialization banner
+  console.log(
+    "%c⚔️ Dorman Lakely's NPC Generator %cv" + packageInfo.version,
+    'color: #d32f2f; font-weight: bold; font-size: 20px;',
+    'color: #f44336; font-weight: normal; font-size: 14px;'
+  );
 
   // Register module settings
   registerSettings();
@@ -22,7 +28,11 @@ Hooks.once('init', async () => {
 
 // Add UI elements when ready
 Hooks.once('ready', async () => {
-  console.log(`${MODULE_ID} | NPC Generator ready`);
+  console.log(
+    "%c⚔️ Dorman Lakely's NPC Generator %c✓ Ready!",
+    'color: #d32f2f; font-weight: bold; font-size: 20px;',
+    'color: #4caf50; font-weight: bold; font-size: 14px;'
+  );
 });
 
 // Re-add button every time the actors directory renders

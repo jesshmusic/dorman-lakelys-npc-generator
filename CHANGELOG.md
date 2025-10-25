@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.1] - 2025-10-25
+
+### Added
+- add compendium destination options for NPC creation
+- add GitHub workflows and release automation
+- rebrand to Dorman Lakely's NPC Generator
+- enhancements
+
+### Fixed
+- refactor compendium actor creation to avoid embedded document issues
+
+### Changed
+- bump version to 1.1.0
+
+### Other
+- initial commit
+
+
 ## [1.1.0] - 2025-10-25
 
 ### Added

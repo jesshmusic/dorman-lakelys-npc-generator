@@ -1,0 +1,20 @@
+<div class="biography-preview-dialog">
+    <p style="margin-bottom: 12px;">Preview generated biography:</p>
+
+    <div class="biography-content">
+        {{biography}}
+    </div>
+
+    {{#if cost}}
+    <p class="ai-cost-estimate">Estimated cost: ${{cost}}</p>
+    {{/if}}
+
+    <footer class="form-footer flexrow">
+        <button type="button" data-action="accept" class="bright">
+            <i class="fas fa-check"></i> Accept
+        </button>
+        <button type="button" data-action="cancel">
+            <i class="fas fa-times"></i> Cancel
+        </button>
+    </footer>
+</div>

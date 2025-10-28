@@ -1,0 +1,13 @@
+<div class="name-selection-dialog">
+    <p style="margin-bottom: 12px;">Select a name from the suggestions:</p>
+
+    {{#each names}}
+    <div class="name-option" data-name="{{this}}" data-action="selectName">
+        {{this}}
+    </div>
+    {{/each}}
+
+    {{#if cost}}
+    <p class="ai-cost-estimate">Estimated cost: ${{cost}}</p>
+    {{/if}}
+</div>

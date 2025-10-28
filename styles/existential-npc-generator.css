@@ -2,70 +2,348 @@
 
 .npc-generator-btn {
     margin-left: 8px;
-    padding: 4px 8px;
-    background: #191813;
-    border: 1px solid #782e22;
-    color: #f0f0e0;
-    font-size: 11px;
-    border-radius: 3px;
+}
+
+/* Form spacing */
+.npc-generator .form-group {
+    margin-bottom: 0.75rem;
+}
+
+/* Drop Zone Styles */
+.drop-zone {
+    border: 2px dashed var(--color-border-dark);
+    border-radius: 4px;
+    padding: 1rem;
+    text-align: center;
+    background: var(--color-bg-option);
+    transition: all 0.3s ease;
     cursor: pointer;
+    margin-bottom: 1rem;
 }
 
-.npc-generator-btn:hover {
-    background: #782e22;
-    box-shadow: 0 0 5px rgba(120, 46, 34, 0.5);
+.drop-zone:hover {
+    background: var(--color-bg-btn-minor-inactive);
+    border-color: var(--color-border-highlight-alt);
 }
 
-.npc-generator-form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+.drop-zone.drag-over {
+    background: var(--color-bg-btn-minor-active);
+    border-color: var(--color-border-highlight);
+    border-style: solid;
 }
 
-.npc-generator-form .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+.drop-zone-content {
+    pointer-events: none;
 }
 
-.npc-generator-form label {
+.drop-zone-content i {
+    color: var(--color-text-dark-secondary);
+    margin-bottom: 0.5rem;
+    opacity: 0.6;
+}
+
+.drop-zone-label {
     font-weight: bold;
-    color: #782e22;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    margin: 0.5rem 0 0.25rem;
 }
 
-.npc-generator-form input,
-.npc-generator-form textarea,
-.npc-generator-form select {
-    padding: 6px 8px;
-    background: rgba(0, 0, 0, 0.1);
-    border: 1px solid #782e22;
-    border-radius: 3px;
-    color: #f0f0e0;
-    font-family: inherit;
-    font-size: 13px;
+.drop-zone-hint {
+    font-size: var(--font-size-11);
+    color: var(--color-text-dark-secondary);
+    margin: 0;
 }
 
-.npc-generator-form input:focus,
-.npc-generator-form textarea:focus,
-.npc-generator-form select:focus {
-    outline: none;
-    border-color: #a03828;
-    box-shadow: 0 0 5px rgba(120, 46, 34, 0.3);
+/* Dropped Actors Display */
+.dropped-actors {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
 }
 
-.npc-generator-form textarea {
-    resize: vertical;
-    min-height: 80px;
+.dropped-actor {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: var(--color-bg-option);
+    border: 1px solid var(--color-border-dark);
+    border-radius: 4px;
 }
 
-.npc-generator-form select {
+.dropped-actor img {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    object-fit: cover;
+}
+
+.dropped-actor-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.dropped-actor-name {
+    font-size: var(--font-size-13);
+    font-weight: bold;
+}
+
+.dropped-actor-cr {
+    font-size: var(--font-size-11);
+    color: var(--color-text-dark-secondary);
+}
+
+.dropped-actor-remove {
+    background: transparent;
+    border: none;
+    color: var(--color-text-dark-secondary);
     cursor: pointer;
+    padding: 0.25rem;
+    transition: color 0.2s ease;
 }
 
-.npc-generator-form select option {
-    background: #191813;
-    color: #f0f0e0;
+.dropped-actor-remove:hover {
+    color: var(--color-text-dark-primary);
+}
+
+/* Image Fields */
+.image-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.image-input-group {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.image-input-group input {
+    flex: 1;
+}
+
+.image-preview {
+    margin-top: 0.5rem;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-option);
+    border: 1px solid var(--color-border-dark);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.image-preview img {
+    max-width: 100%;
+    max-height: 120px;
+    object-fit: contain;
+}
+
+/* AI Generation Styles */
+.input-with-ai {
+    display: flex;
+    gap: 0.25rem;
+    align-items: flex-start;
+}
+
+.input-with-ai input,
+.input-with-ai textarea {
+    flex: 1;
+}
+
+.ai-assist-btn {
+    padding: 0.375rem 0.625rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: 1px solid #5a67d8;
+    border-radius: 3px;
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ai-assist-btn:hover {
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46a0 100%);
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+    transform: translateY(-1px);
+}
+
+.ai-assist-btn:active {
+    transform: translateY(0);
+}
+
+.ai-assist-btn i {
+    font-size: var(--font-size-14);
+}
+
+.ai-assist-btn.loading {
+    animation: pulse 1.5s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.ai-section {
+    border-top: 1px solid var(--color-border-dark);
+    padding-top: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.ai-generate-btn {
+    width: 100%;
+    padding: 0.625rem 1rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: 1px solid #5a67d8;
+    border-radius: 4px;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.ai-generate-btn:hover {
+    background: linear-gradient(135deg, #5a67d8 0%, #6b46a0 100%);
+    box-shadow: 0 0 15px rgba(102, 126, 234, 0.6);
+    transform: translateY(-2px);
+}
+
+.ai-generate-btn:active {
+    transform: translateY(0);
+}
+
+.ai-generate-btn.loading {
+    animation: pulse 1.5s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.ai-output {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: var(--color-bg-option);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 4px;
+    font-size: var(--font-size-13);
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.ai-cost-estimate {
+    margin-top: 0.5rem;
+    font-size: var(--font-size-11);
+    color: var(--color-text-dark-secondary);
+    text-align: right;
+}
+
+/* Instructions */
+.instructions {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    background: var(--color-bg-option);
+    border: 1px solid var(--color-border-dark);
+    border-radius: 4px;
+}
+
+/* CR Change Indicator */
+.cr-select-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cr-select-wrapper select {
+    flex: 1;
+}
+
+.cr-change-indicator {
+    font-weight: bold;
+    font-size: var(--font-size-14);
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    min-width: 40px;
+    text-align: center;
+}
+
+.cr-change-indicator.positive {
+    color: #00ff00;
+    background: rgba(0, 255, 0, 0.1);
+}
+
+.cr-change-indicator.negative {
+    color: #ff0000;
+    background: rgba(255, 0, 0, 0.1);
+}
+
+.instructions p {
+    margin: 0;
+    font-size: var(--font-size-13);
+    line-height: 1.5;
+}
+
+/* Dialog Backgrounds - Override textured backgrounds */
+.name-selection.window-app .window-content,
+.biography-preview.window-app .window-content {
+    background: #000 !important;
+    background-image: none !important;
+    color: #fff;
+}
+
+/* Name Selection Modal */
+.name-selection-dialog {
+    padding: 1rem;
+}
+
+.name-option {
+    padding: 0.625rem 0.75rem;
+    margin: 0.375rem 0;
+    background: var(--color-bg-option);
+    border: 1px solid var(--color-border-dark);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.name-option:hover {
+    background: var(--color-bg-btn-minor-inactive);
+    border-color: var(--color-border-highlight-alt);
+    transform: translateX(4px);
+}
+
+.name-option.selected {
+    background: var(--color-bg-btn-minor-active);
+    border-color: var(--color-border-highlight);
+}
+
+/* Biography Preview Dialog */
+.biography-preview-dialog {
+    padding: 1rem;
+}
+
+.biography-content {
+    padding: 0.75rem;
+    background: var(--color-bg-option);
+    border: 1px solid var(--color-border-dark);
+    border-radius: 4px;
+    font-size: var(--font-size-13);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
 }

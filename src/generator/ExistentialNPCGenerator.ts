@@ -35,6 +35,8 @@ export interface NPC {
     gp: number;
     pp: number;
   };
+  portrait?: string;
+  token?: string;
 }
 
 export class NPCGenerator {
@@ -102,19 +104,33 @@ export class NPCGenerator {
     '30'
   ];
 
-  static readonly CLASSES = [
-    'Barbarian',
-    'Bard',
-    'Cleric',
-    'Druid',
-    'Fighter',
-    'Monk',
-    'Paladin',
-    'Ranger',
-    'Rogue',
-    'Sorcerer',
-    'Warlock',
-    'Wizard'
+  static readonly ROLES = [
+    'Warrior',
+    'Guard',
+    'Soldier',
+    'Mercenary',
+    'Knight',
+    'Merchant',
+    'Shopkeeper',
+    'Innkeeper',
+    'Blacksmith',
+    'Craftsperson',
+    'Farmer',
+    'Hunter',
+    'Scout',
+    'Noble',
+    'Diplomat',
+    'Scholar',
+    'Mage',
+    'Priest',
+    'Healer',
+    'Entertainer',
+    'Thief',
+    'Smuggler',
+    'Assassin',
+    'Sailor',
+    'Captain',
+    'Explorer'
   ];
 
   private static getSpeed(species: string): NPC['speed'] {
@@ -318,7 +334,9 @@ export class NPCGenerator {
       skills,
       saves,
       languages,
-      currency
+      currency,
+      portrait: data.portrait || undefined,
+      token: data.token || undefined
     };
   }
 }

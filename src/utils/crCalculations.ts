@@ -381,7 +381,7 @@ const CR_TABLE: Record<string, CRTableEntry> = {
     xp: 135000,
     profBonus: 9,
     ac: 19,
-    hpMin: 760,
+    hpMin: 761,
     hpMax: 805,
     attackBonus: 13,
     damageMin: 285,

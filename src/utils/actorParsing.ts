@@ -85,7 +85,7 @@ export function parseActorData(actor: any): ParsedActorData | null {
   const items = actor.items ? Array.from(actor.items) : [];
   const classItem = items.find(
     (i: any) => i.type === 'class' || i.name?.toLowerCase().includes('class')
-  );
+  ) as any;
   if (classItem) {
     actorClass = classItem.name;
   }

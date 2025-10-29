@@ -1,19 +1,25 @@
 // AI Service for NPC generation using OpenAI and Anthropic APIs
 
+import { ImageService } from '../utils/ImageService.js';
+
 const MODULE_ID = 'dorman-lakelys-npc-generator';
 
 /**
  * Request types for AI generation
  */
 export interface AIGenerationRequest {
-  type: 'name' | 'biography';
+  type: 'name' | 'biography' | 'portrait';
   context: {
     name?: string;
     species?: string;
     class?: string;
+    role?: string;
+    gender?: string;
     alignment?: string;
     challengeRating?: string;
     description?: string;
+    personality?: string;
+    flavor?: string;
   };
 }
 
@@ -48,6 +54,9 @@ export abstract class AIProvider {
       case 'biography':
         prompt = this.buildBiographyPrompt(context);
         break;
+      case 'portrait':
+        prompt = this.buildPortraitPrompt(context);
+        break;
       default:
         prompt = '';
     }
@@ -58,36 +67,74 @@ export abstract class AIProvider {
   }
 
   private buildNamePrompt(context: any): string {
-    const templateActorName = context.templateActorName ? `based on the template actor "${context.templateActorName}"` : '';
-    return `Generate 1 creative and appropriate name for a D&D 5e NPC ${templateActorName} with these characteristics:
-- Species: ${context.species || 'Human'}
-- Alignment: ${context.alignment || 'Neutral'}
+    const flavorContext = context.flavor ? `\n- Campaign Flavor: ${context.flavor}` : '';
+    const genderContext = context.gender ? `\n- Gender: ${context.gender}` : '';
+    return `Generate 1 creative and appropriate name for a D&D 5e NPC with these characteristics:
+- Role: ${context.role || 'Fighter'}
+- Alignment: ${context.alignment || 'Neutral'}${genderContext}${flavorContext}
 
 Provide ONLY the name, nothing else. No explanation, numbering, or extra text. Just the name.`;
   }
 
   private buildBiographyPrompt(context: any): string {
-    const templateActorInfo = context.templateActorName
-      ? `\n- Based on template actor: ${context.templateActorName}${context.templateActorDescription ? ` (${context.templateActorDescription})` : ''}`
-      : '';
+    const flavorInfo = context.flavor ? `\n- Campaign Flavor: ${context.flavor}` : '';
+    const personalityInfo = context.personality ? `\n- Personality: ${context.personality}` : '';
+    const idealInfo = context.ideal ? `\n- Ideal: ${context.ideal}` : '';
+    const bondInfo = context.bond ? `\n- Bond: ${context.bond}` : '';
 
-    return `Create a single paragraph biography for a D&D 5e NPC with these characteristics:
+    return `Create a brief biography for a D&D 5e NPC with these characteristics:
 ${context.name ? `- Name: ${context.name}` : ''}
-- Species: ${context.species || 'Human'}
+- Role: ${context.role || 'Fighter'}
 - Alignment: ${context.alignment || 'Neutral'}
-- Challenge Rating: ${context.challengeRating || '1'}${templateActorInfo}
-${context.description ? `- Additional context: ${context.description}` : ''}
+- Challenge Rating: ${context.challengeRating || '1'}${flavorInfo}${personalityInfo}${idealInfo}${bondInfo}
+${context.biography ? `- Existing notes: ${context.biography}` : ''}
 
-Write ONE concise paragraph (4-6 sentences) that includes:
-1. A quick rundown of who they are and their background
-2. What they look like (physical appearance, clothing, distinguishing features)
-3. A brief sentence about their personality and demeanor
+Write ONE concise paragraph (3-5 sentences) that includes:
+1. Who they are and their background
+2. Physical appearance and distinguishing features
+3. How their personality and ideals shape their demeanor
+${context.flavor ? `4. Elements appropriate to the ${context.flavor} setting` : ''}
 
-IMPORTANT: DO NOT mention any specific locations, place names, cities, forests, or geographical features. Keep the description generic so it fits any campaign setting.
+${context.flavor ? `IMPORTANT: Incorporate elements from the ${context.flavor} flavor/setting, but DO NOT mention specific locations that may conflict with the GM's world.` : 'IMPORTANT: DO NOT mention any specific locations, place names, cities, forests, or geographical features. Keep the description generic so it fits any campaign setting.'}
 
-Format the output as HTML wrapped in a <p> tag. Make it engaging, specific, and suitable for a D&D campaign. Return ONLY the HTML paragraph, no other text.`;
+Format the output as HTML wrapped in a <p> tag. Return ONLY the HTML paragraph, no other text.`;
   }
 
+  protected buildPortraitPrompt(context: any): string {
+    // Get art style from settings, default to "fantasy realistic"
+    const artStyle =
+      ((game.settings as any)?.get(MODULE_ID, 'portraitArtStyle') as string) || 'fantasy realistic';
+
+    const role = context.role || 'adventurer';
+    const species = context.species || 'human';
+    const personality = context.personality || '';
+    const flavor = context.flavor || '';
+
+    // Build descriptive prompt for DALL-E (excluding alignment to avoid content policy issues)
+    let prompt = `A detailed character portrait of a ${species} ${role}`;
+
+    // Add flavor-specific context
+    if (flavor) {
+      prompt += ` in a ${flavor} setting`;
+    }
+
+    prompt += `, ${artStyle} art style`;
+
+    // Add more flavor context if available
+    if (flavor) {
+      prompt += `, inspired by ${flavor} aesthetics`;
+    }
+
+    prompt += `, head and shoulders view, detailed facial features, dramatic lighting`;
+
+    if (personality) {
+      prompt += `, ${personality} expression`;
+    }
+
+    prompt += `, professional ${artStyle} artwork`;
+
+    return prompt;
+  }
 }
 
 /**
@@ -114,6 +161,11 @@ export class OpenAIProvider extends AIProvider {
       };
     }
 
+    // Route portrait requests to DALL-E image generation
+    if (request.type === 'portrait') {
+      return await this.generatePortraitImage(request);
+    }
+
     const prompt = this.buildPrompt(request);
 
     try {
@@ -137,7 +189,11 @@ export class OpenAIProvider extends AIProvider {
         max_tokens: 500
       };
 
-      console.log("Dorman Lakely's NPC Gen | OpenAI Request:", { url, model: this.model, bodyModel: requestBody.model });
+      console.log("Dorman Lakely's NPC Gen | OpenAI Request:", {
+        url,
+        model: this.model,
+        bodyModel: requestBody.model
+      });
 
       const response = await fetch(url, {
         method: 'POST',
@@ -169,8 +225,8 @@ export class OpenAIProvider extends AIProvider {
         // Split names into array
         parsedContent = content
           .split('\n')
-          .map(line => line.trim())
-          .filter(line => line.length > 0)
+          .map((line: string) => line.trim())
+          .filter((line: string) => line.length > 0)
           .slice(0, 5);
       } else {
         parsedContent = content;
@@ -191,6 +247,124 @@ export class OpenAIProvider extends AIProvider {
         success: false,
         content: '',
         error: error.message || 'Unknown error occurred'
+      };
+    }
+  }
+
+  /**
+   * Generate portrait image using DALL-E 3
+   */
+  async generatePortraitImage(request: AIGenerationRequest): Promise<AIGenerationResponse> {
+    const prompt = this.buildPrompt(request);
+    const npcName = request.context.name || 'NPC';
+
+    try {
+      // DALL-E 3 API endpoint
+      const dalleURL = 'https://api.openai.com/v1/images/generations';
+      const url = this.corsProxy + dalleURL;
+
+      const requestBody = {
+        model: 'dall-e-3',
+        prompt: prompt,
+        n: 1,
+        size: '1024x1024',
+        quality: 'standard'
+      };
+
+      console.log("Dorman Lakely's NPC Gen | DALL-E Request:", { prompt, size: '1024x1024' });
+
+      // Show cost warning
+      ui.notifications?.info(
+        'Generating portrait... This will cost approximately $0.04 and may take 15-30 seconds.',
+        { permanent: false }
+      );
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Dorman Lakely's NPC Gen | DALL-E Error Response:", errorText);
+
+        let userFriendlyMessage = 'Failed to generate portrait. ';
+
+        try {
+          const errorData = JSON.parse(errorText);
+          const apiError = errorData.error;
+
+          // Provide user-friendly messages based on error type
+          if (response.status === 429) {
+            userFriendlyMessage += 'Rate limit exceeded. Please wait a moment and try again.';
+          } else if (response.status === 401) {
+            userFriendlyMessage +=
+              'Invalid API key. Please check your OpenAI API key in module settings.';
+          } else if (response.status === 500 || apiError?.type === 'server_error') {
+            userFriendlyMessage +=
+              "OpenAI's servers encountered an error. This sometimes happens with complex prompts. Try again in a few moments.";
+          } else if (apiError?.code === 'content_policy_violation') {
+            userFriendlyMessage +=
+              'The portrait request was blocked by content policy. Try changing the NPC details or personality.';
+          } else if (apiError?.message) {
+            userFriendlyMessage += apiError.message;
+          } else {
+            userFriendlyMessage += `Server returned error ${response.status}. Please try again.`;
+          }
+
+          throw new Error(userFriendlyMessage);
+        } catch (e: any) {
+          // If error parsing fails, throw generic message
+          if (e.message.startsWith('Failed to generate portrait')) {
+            throw e;
+          }
+          throw new Error(
+            `Failed to generate portrait. Server returned error ${response.status}. Please try again.`
+          );
+        }
+      }
+
+      const data = await response.json();
+      const imageUrl = data.data[0]?.url;
+
+      if (!imageUrl) {
+        throw new Error(
+          'No image was generated. This is unusual - please try again or contact support if the issue persists.'
+        );
+      }
+
+      console.log("Dorman Lakely's NPC Gen | DALL-E image URL received:", imageUrl);
+
+      // Download and save the image
+      ui.notifications?.info('Downloading and saving portrait...', { permanent: false });
+      const localPath = await ImageService.downloadAndSave(imageUrl, npcName);
+
+      if (!localPath) {
+        throw new Error(
+          'Portrait was generated but could not be saved. Check that Foundry has permission to write to the Data folder.'
+        );
+      }
+
+      (ui.notifications as any)?.success(`Portrait generated and saved to: ${localPath}`, {
+        permanent: false
+      });
+
+      return {
+        success: true,
+        content: localPath,
+        estimatedCost: 0.04 // DALL-E 3 standard 1024x1024 cost
+      };
+    } catch (error: any) {
+      console.error("Dorman Lakely's NPC Gen | DALL-E API Error:", error);
+      // Don't show notification here - let the UI handler do it to avoid duplicate notifications
+      return {
+        success: false,
+        content: '',
+        error: error.message || 'Unknown error occurred while generating portrait.'
       };
     }
   }
@@ -226,7 +400,7 @@ export class AIService {
       };
     }
 
-    const enableAI = game.settings.get(MODULE_ID, 'enableAI') as boolean;
+    const enableAI = (game.settings as any).get(MODULE_ID, 'enableAI') as boolean;
     if (!enableAI) {
       return {
         success: false,
@@ -235,8 +409,8 @@ export class AIService {
       };
     }
 
-    const apiKey = game.settings.get(MODULE_ID, 'openaiApiKey') as string;
-    const model = (game.settings.get(MODULE_ID, 'openaiModel') as string) || 'gpt-4o-mini';
+    const apiKey = (game.settings as any).get(MODULE_ID, 'openaiApiKey') as string;
+    const model = ((game.settings as any).get(MODULE_ID, 'openaiModel') as string) || 'gpt-4o-mini';
 
     if (!apiKey) {
       ui.notifications?.warn('OpenAI API key not configured. Check module settings.');

@@ -15,13 +15,19 @@
       }
     },
     "ui": {
-      "generateButton": "Generate NPC",
+      "generateButton": "Dorman's NPC Gen",
       "dialogTitle": "Dorman Lakely's NPC Generator",
       "createActor": "Create Actor",
       "regenerate": "Regenerate",
       "close": "Close",
       "npcCreated": "Created NPC: {name}",
-      "npcCreationError": "Failed to create NPC"
+      "npcCreationError": "Failed to create NPC",
+      "generatePortrait": "Generate Portrait ($0.04)",
+      "generatingPortrait": "Generating portrait... This will cost approximately $0.04 and may take 15-30 seconds.",
+      "downloadingPortrait": "Downloading and saving portrait...",
+      "portraitGenerated": "Portrait generated and saved to: {path}",
+      "portraitGenerationFailed": "Failed to generate portrait: {error}",
+      "portraitSaveFailed": "Failed to save portrait to local file system"
     },
     "fields": {
       "name": "Name",

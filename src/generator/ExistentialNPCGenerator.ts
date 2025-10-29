@@ -55,6 +55,55 @@ export class NPCGenerator {
     'Kobold'
   ];
 
+  static readonly FLAVORS = [
+    // Campaign Settings
+    'Forgotten Realms',
+    'Greyhawk',
+    'Eberron',
+    'Dragonlance',
+    'Dark Sun',
+    'Ravenloft',
+    'Curse of Strahd',
+    'Icewind Dale',
+    'Waterdeep',
+    'Baldur\'s Gate',
+    'Spelljammer',
+    'Planescape',
+    // Generic/Historical Flavors
+    'Viking',
+    'Celtic',
+    'Medieval European',
+    'Arabian Nights',
+    'Ancient Greek',
+    'Ancient Roman',
+    'Egyptian',
+    'Asian (Wuxia)',
+    'Samurai',
+    'Wild West',
+    'Pirate',
+    'Post-Apocalyptic',
+    'Steampunk',
+    'Gothic Horror',
+    'Cosmic Horror',
+    'Fairy Tale',
+    'Arthurian',
+    'Nordic/Norse',
+    'Polynesian',
+    'Aztec/Mayan',
+    'Swashbuckler',
+    'Noir Detective'
+  ];
+
+  static readonly GENDERS = [
+    'Male',
+    'Female',
+    'Non-binary',
+    'Androgynous',
+    'Genderfluid',
+    'Agender',
+    'Other'
+  ];
+
   static readonly ALIGNMENTS = [
     'Lawful Good',
     'Neutral Good',
@@ -105,32 +154,77 @@ export class NPCGenerator {
   ];
 
   static readonly ROLES = [
-    'Warrior',
-    'Guard',
-    'Soldier',
-    'Mercenary',
-    'Knight',
-    'Merchant',
-    'Shopkeeper',
-    'Innkeeper',
+    'Fighter',
+    'Barbarian',
+    'Wizard',
+    'Sorcerer',
+    'Cleric',
+    'Druid',
+    'Rogue',
+    'Ranger',
+    'Paladin',
+    'Monk',
+    'Bard',
+    'Warlock',
     'Blacksmith',
-    'Craftsperson',
-    'Farmer',
-    'Hunter',
-    'Scout',
+    'Merchant',
     'Noble',
-    'Diplomat',
+    'Guard',
+    'Farmer',
+    'Innkeeper',
     'Scholar',
-    'Mage',
-    'Priest',
     'Healer',
     'Entertainer',
     'Thief',
-    'Smuggler',
-    'Assassin',
     'Sailor',
-    'Captain',
     'Explorer'
+  ];
+
+  static readonly PERSONALITIES = [
+    'Argumentative and stubborn',
+    'Arrogant and condescending',
+    'Blustering and boastful',
+    'Curious and inquisitive',
+    'Friendly and helpful',
+    'Honest and straightforward',
+    'Hot-tempered and quick to anger',
+    'Irritable and impatient',
+    'Ponderous and slow to act',
+    'Quiet and reserved',
+    'Rude and insulting',
+    'Suspicious and paranoid'
+  ];
+
+  static readonly IDEALS = [
+    '<b>Beauty</b>. Life is meant to be beautiful. (Good)',
+    '<b>Charity</b>. I always help those in need. (Good)',
+    '<b>Community</b>. We must take care of each other. (Good)',
+    '<b>Fairness</b>. No one should be treated unfairly. (Good)',
+    '<b>Freedom</b>. Everyone should be free. (Chaotic)',
+    '<b>Glory</b>. I must earn glory in battle. (Any)',
+    '<b>Greater Good</b>. My gifts are meant to help others. (Good)',
+    '<b>Greed</b>. I will do anything to become wealthy. (Evil)',
+    '<b>Honor</b>. I keep my word. (Lawful)',
+    '<b>Independence</b>. I am a free spirit. (Chaotic)',
+    '<b>Knowledge</b>. The path to power is through knowledge. (Neutral)',
+    '<b>Power</b>. I will become the greatest. (Evil)',
+    '<b>Redemption</b>. There is a spark of good in everyone. (Good)',
+    '<b>Tradition</b>. The old ways must be preserved. (Lawful)'
+  ];
+
+  static readonly BONDS = [
+    'I would die to recover an ancient artifact that was stolen from me.',
+    'I will face any challenge to win the approval of my family.',
+    'My house\'s alliance with another house must be sustained.',
+    'Nothing is more important than the other members of my family.',
+    'I am in love with the heir of a family that my family despises.',
+    'I owe my life to someone who saved me from a terrible fate.',
+    'Someone I loved died because of a mistake I made.',
+    'My loyalty to my sovereign is unwavering.',
+    'The common folk must see me as a hero.',
+    'I have a family, but I have no idea where they are.',
+    'I worked the land, I love the land, and I will protect the land.',
+    'A proud noble once gave me a horrible beating, and I will take revenge.'
   ];
 
   private static getSpeed(species: string): NPC['speed'] {
@@ -302,7 +396,7 @@ export class NPCGenerator {
   static generateNPC(data: Partial<NPC>): NPC {
     const species = data.species || NPCGenerator.SPECIES[0];
     const cr = data.challengeRating || NPCGenerator.CHALLENGE_RATINGS[0];
-    const classType = data.class || NPCGenerator.CLASSES[0];
+    const classType = data.class || NPCGenerator.ROLES[0];
     const abilities = this.generateAbilities(cr, species);
     const stats = getCRStats(cr);
 

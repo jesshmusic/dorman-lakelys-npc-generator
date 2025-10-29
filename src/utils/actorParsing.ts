@@ -77,8 +77,7 @@ export function parseActorData(actor: any): ParsedActorData | null {
 
   // Get portrait and token
   const portrait = actor.img || 'icons/svg/mystery-man.svg';
-  const token =
-    actor.prototypeToken?.texture?.src || actor.token?.texture?.src || portrait;
+  const token = actor.prototypeToken?.texture?.src || actor.token?.texture?.src || portrait;
 
   // Try to determine class from items
   let actorClass: string | undefined;
@@ -133,9 +132,7 @@ export function averageActors(actors: any[]): ParsedActorData | null {
     wis: Math.round(
       parsedActors.reduce((sum, a) => sum + a.abilities.wis, 0) / parsedActors.length
     ),
-    cha: Math.round(
-      parsedActors.reduce((sum, a) => sum + a.abilities.cha, 0) / parsedActors.length
-    )
+    cha: Math.round(parsedActors.reduce((sum, a) => sum + a.abilities.cha, 0) / parsedActors.length)
   };
 
   // Average CR (convert to numeric, average, then back to string)

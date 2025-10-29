@@ -1,6 +1,8 @@
 // UI components for the NPC Generator
 import { NPCGenerator, NPC } from '../generator/ExistentialNPCGenerator.js';
 import { AIService, AIGenerationRequest } from '../services/AIService.js';
+import { PortraitConfirmationDialog } from './PortraitConfirmationDialog.js';
+import { parseCR } from '../utils/crCalculations.js';
 
 const MODULE_ID = 'dorman-lakelys-npc-generator';
 
@@ -254,9 +256,7 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
     // Use the generated biography directly
     const biography = response.content as string;
     if (biography) {
-      const biographyTextarea = this.element.querySelector(
-        '#npc-biography'
-      ) as HTMLTextAreaElement;
+      const biographyTextarea = this.element.querySelector('#npc-biography') as HTMLTextAreaElement;
       if (biographyTextarea) {
         biographyTextarea.value = biography;
         ui.notifications?.info('Biography generated successfully');
@@ -268,25 +268,19 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
    * Generate portrait using DALL-E
    */
   async _generatePortrait(context: any): Promise<void> {
-    const request: AIGenerationRequest = {
-      type: 'portrait',
-      context
-    };
+    // Show confirmation dialog which handles the entire generation flow
+    const result = await PortraitConfirmationDialog.show(context);
 
-    const response = await AIService.generate(request);
-
-    if (!response.success) {
-      // Error message from AIService is already user-friendly and complete
-      ui.notifications?.error(response.error || 'Failed to generate portrait. Please try again.');
+    // User cancelled or generation failed
+    if (!result.success) {
       return;
     }
 
-    // Use the generated portrait path directly
-    const portraitPath = response.content as string;
-    if (portraitPath) {
+    // Success! Update the portrait field
+    if (result.portraitPath) {
       const portraitInput = this.element.querySelector('#npc-portrait') as HTMLInputElement;
       if (portraitInput) {
-        portraitInput.value = portraitPath;
+        portraitInput.value = result.portraitPath;
         // Trigger preview update
         this._updateImagePreview('portrait');
       }
@@ -444,7 +438,7 @@ export class NPCGeneratorUI {
             }
           },
           details: {
-            cr: npc.challengeRating,
+            cr: parseCR(npc.challengeRating),
             type: {
               value: npc.species.toLowerCase()
             },

@@ -4,6 +4,17 @@
         <p><strong>Quick NPC Generator:</strong> Fill in the basic details below and {{#if aiEnabled}}use AI to{{else}}manually{{/if}} create your NPC</p>
     </div>
 
+    <!-- Folder Selection -->
+    <div class="form-group" id="folder-select-group">
+        <label for="npc-folder">Folder (Optional)</label>
+        <select id="npc-folder" name="folder">
+            <option value="">-- No Folder --</option>
+            {{#each folders}}
+            <option value="{{this.id}}">{{this.name}}</option>
+            {{/each}}
+        </select>
+    </div>
+
     <!-- Flavor -->
     <div class="form-group">
         <label for="npc-flavor">Campaign Flavor</label>
@@ -13,19 +24,6 @@
             <option value="{{this}}">{{this}}</option>
             {{/each}}
         </select>
-    </div>
-
-    <!-- Name -->
-    <div class="form-group">
-        <label for="npc-name">Name <span class="required">*</span></label>
-        <div class="input-with-ai">
-            <input type="text" id="npc-name" name="name" placeholder="Enter NPC name" required />
-            {{#if aiEnabled}}
-            <button type="button" class="ai-assist-btn" data-ai-action="generateName" title="Generate Name">
-                <i class="fas fa-wand-magic-sparkles"></i>
-            </button>
-            {{/if}}
-        </div>
     </div>
 
     <!-- Gender -->
@@ -47,6 +45,19 @@
             <option value="{{this}}">{{this}}</option>
             {{/each}}
         </select>
+    </div>
+
+    <!-- Name -->
+    <div class="form-group">
+        <label for="npc-name">Name <span class="required">*</span></label>
+        <div class="input-with-ai">
+            <input type="text" id="npc-name" name="name" placeholder="Enter NPC name" required />
+            {{#if aiEnabled}}
+            <button type="button" class="ai-assist-btn" data-ai-action="generateName" title="Generate Name">
+                <i class="fas fa-wand-magic-sparkles"></i>
+            </button>
+            {{/if}}
+        </div>
     </div>
 
     <!-- Alignment -->
@@ -120,17 +131,6 @@
         <div class="image-preview" data-preview="token">
             <img src="" alt="Token Preview" style="display: none; max-width: 100px; max-height: 100px; margin-top: 5px;" />
         </div>
-    </div>
-
-    <!-- Folder Selection -->
-    <div class="form-group" id="folder-select-group">
-        <label for="npc-folder">Folder (Optional)</label>
-        <select id="npc-folder" name="folder">
-            <option value="">-- No Folder --</option>
-            {{#each folders}}
-            <option value="{{this.id}}">{{this.name}}</option>
-            {{/each}}
-        </select>
     </div>
 
     <footer class="form-footer flexrow">

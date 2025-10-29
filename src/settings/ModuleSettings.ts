@@ -43,12 +43,13 @@ export function registerSettings(): void {
     config: true,
     type: String,
     choices: {
-      'fantasy realistic': 'Fantasy Realistic (Default)',
+      'fantasy painting': 'Fantasy Painting (Default)',
+      'fantasy realistic': 'Fantasy Realistic',
       'fantasy painterly': 'Fantasy Painterly',
       'digital art': 'Digital Art',
       'anime style': 'Anime Style',
       'pencil sketch': 'Pencil Sketch'
     },
-    default: 'fantasy realistic'
+    default: 'fantasy painting'
   });
 }

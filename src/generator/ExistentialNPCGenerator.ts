@@ -66,7 +66,7 @@ export class NPCGenerator {
     'Curse of Strahd',
     'Icewind Dale',
     'Waterdeep',
-    'Baldur\'s Gate',
+    "Baldur's Gate",
     'Spelljammer',
     'Planescape',
     // Generic/Historical Flavors
@@ -154,6 +154,7 @@ export class NPCGenerator {
   ];
 
   static readonly ROLES = [
+    // Adventurer Classes
     'Fighter',
     'Barbarian',
     'Wizard',
@@ -166,18 +167,76 @@ export class NPCGenerator {
     'Monk',
     'Bard',
     'Warlock',
-    'Blacksmith',
-    'Merchant',
-    'Noble',
-    'Guard',
-    'Farmer',
-    'Innkeeper',
-    'Scholar',
-    'Healer',
-    'Entertainer',
-    'Thief',
+    // Adventure NPCs
+    'Spy',
+    'Assassin',
+    'Bounty Hunter',
+    'Smuggler',
+    'Pirate',
+    'Bandit',
+    'Mercenary',
+    'Explorer',
     'Sailor',
-    'Explorer'
+    'Criminal Contact',
+    // Authority & Leadership
+    'Noble',
+    'Guildmaster',
+    'Diplomat',
+    'Politician',
+    'City Guard',
+    'Guard Captain',
+    'Town Crier',
+    'Tax Collector',
+    // Religion & Magic
+    'Priest',
+    'Acolyte',
+    'Healer',
+    'Alchemist',
+    'Herbalist',
+    'Fortune Teller',
+    // Merchants & Traders
+    'Merchant',
+    'Pawnbroker',
+    'Jeweler',
+    'Fence',
+    'Caravan Master',
+    // Artisans & Crafters
+    'Blacksmith',
+    'Armorer',
+    'Weaponsmith',
+    'Fletcher',
+    'Leatherworker',
+    'Jeweler (Artisan)',
+    // Service & Hospitality
+    'Innkeeper',
+    'Tavern Keeper',
+    'Cook',
+    'Barkeep',
+    'Stable Master',
+    'Guide',
+    // Scholars & Artists
+    'Scholar',
+    'Scribe',
+    'Cartographer',
+    'Librarian',
+    'Sage',
+    'Minstrel',
+    'Entertainer',
+    'Artist',
+    // Common Folk
+    'Farmer',
+    'Fisherman',
+    'Miner',
+    'Beggar',
+    'Street Urchin',
+    'Servant',
+    'Laborer',
+    // Outcasts & Criminals
+    'Thief',
+    'Cultist',
+    'Witch',
+    'Hermit',
+    'Exile'
   ];
 
   static readonly PERSONALITIES = [
@@ -215,7 +274,7 @@ export class NPCGenerator {
   static readonly BONDS = [
     'I would die to recover an ancient artifact that was stolen from me.',
     'I will face any challenge to win the approval of my family.',
-    'My house\'s alliance with another house must be sustained.',
+    "My house's alliance with another house must be sustained.",
     'Nothing is more important than the other members of my family.',
     'I am in love with the heir of a family that my family despises.',
     'I owe my life to someone who saved me from a terrible fate.',

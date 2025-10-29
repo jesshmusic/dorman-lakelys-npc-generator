@@ -25,6 +25,7 @@ export interface AIGenerationRequest {
     dalleSize?: string; // '1024x1024', '1024x1792', etc.
     dalleQuality?: string; // 'standard', 'hd', 'medium', 'high', 'auto'
     biography?: string; // For physical description in portrait prompts
+    customPrompt?: string; // User-edited custom prompt for portrait generation
   };
 }
 
@@ -120,12 +121,12 @@ Write TWO paragraphs in HTML:
 • Who they are and background • How personality/ideals shape demeanor ${context.flavor ? `• Elements appropriate to the ${context.flavor} tone` : ''}</p>
 
 <p> (EXACTLY 1 sentence)
-• Physical appearance & distinguishing features${speciesInfo ? ` • Include ${context.species}-specific traits (ears, tusks, scales, fur, size, proportions, etc.)` : ''} • Portrait-visible details • Clothing/equipment that define the silhouette</p>
+• Physical appearance & distinguishing features${speciesInfo ? ` • Include ${context.species}-specific traits` : ''} • Portrait-visible details • Clothing/equipment that define the silhouette</p>
 
 IMPORTANT: Do NOT use named IP (no brands, books, places). Keep it generic to fit any campaign. Return ONLY the two <p> tags. Be concise - stick to the exact sentence counts.`;
   }
 
-  /** Strong, policy-safe prompt for image generation */
+  /** Build simple portrait prompt for user editing */
   protected buildPortraitPrompt(context: any): string {
     const artStyle =
       context.artStyle ||
@@ -136,54 +137,13 @@ IMPORTANT: Do NOT use named IP (no brands, books, places). Keep it generic to fi
     const gender = context.gender || '';
     const role = context.role || 'adventurer';
     const species = context.species || 'human';
-    const personality = context.personality || '';
-    const flavor = context.flavor || ''; // e.g., "Norse", "Gothic", "Desert caravan", etc.
     const biography = context.biography || '';
 
-    // Style presets that evoke "book art" without naming brands
-    const stylePresets: Record<string, string> = {
-      'fantasy painting': [
-        'studio-painted character portrait',
-        'ink-and-wash linework with painted glazing',
-        'subtle halftone texture and parchment patina',
-        'clean silhouette, readable shapes, crisp edge control',
-        'color script: jewel tones with muted shadows',
-        'medium: digital gouache + pencil lineart'
-      ].join(', '),
-      'oil portrait': [
-        'oil-on-canvas brushwork',
-        'impasto highlights and soft diffusion',
-        'Baroque rim light, painterly edges'
-      ].join(', '),
-      watercolor: [
-        'watercolor on cold-press cotton',
-        'granulation and drybrush details',
-        'inked contours'
-      ].join(', ')
-    };
+    // Build simple, editable prompt
+    let prompt = `A portrait of a ${species} ${role}`;
 
-    const stylePreset = stylePresets[artStyle] || artStyle;
-
-    let prompt = [
-      // Core subject
-      `Original character portrait for a tabletop fantasy role-playing game`,
-      `a ${species} ${role}${gender ? `, ${gender.toLowerCase()}` : ''}${name ? `, named ${name}` : ''}`,
-      flavor ? `in a ${flavor} tone` : '',
-      // Framing & readability for VTT / book feel
-      `square composition, head-and-shoulders to mid-torso`,
-      `heroic, front three-quarter view, camera at eye level`,
-      `dramatic chiaroscuro rim light, background out of focus`,
-      // Book-art stylization
-      `${stylePreset}`,
-      `highly readable face, expressive eyes, subtle pore-level detail`,
-      `clean rendering, no heavy motion blur, no posterization`,
-      // Safety & IP guardrails (helps avoid refusals)
-      `make everything fully original, do not reference or depict copyrighted characters, logos, or trademarked brands`
-    ]
-      .filter(Boolean)
-      .join(', ');
-
-    if (personality) prompt += `, ${personality} expression`;
+    if (gender) prompt += `, ${gender.toLowerCase()}`;
+    if (name) prompt += `, named ${name}`;
 
     // Pull physical details from second <p> of the biography
     if (biography) {
@@ -193,13 +153,12 @@ IMPORTANT: Do NOT use named IP (no brands, books, places). Keep it generic to fi
       if (matches?.length >= 2) physical = toText(matches[1]);
       else if (matches?.length === 1) physical = toText(matches[0]);
       if (physical) {
-        const excerpt = physical.substring(0, 400);
-        prompt += `. Physical appearance details: ${excerpt}`;
+        const excerpt = physical.substring(0, 300);
+        prompt += `. ${excerpt}`;
       }
     }
 
-    // VTT-friendly final touches
-    prompt += `, centered subject, neutral backdrop with light vignette, no text, no watermark, ultra-high detail`;
+    prompt += `. Art style: ${artStyle}`;
 
     return this.sanitizeForPolicy(prompt);
   }
@@ -383,7 +342,8 @@ export class OpenAIProvider extends AIProvider {
    * Generate portrait image using DALL-E
    */
   async generatePortraitImage(request: AIGenerationRequest): Promise<AIGenerationResponse> {
-    let prompt = this.buildPrompt(request);
+    // Use custom prompt if provided, otherwise build one
+    let prompt = request.context.customPrompt || this.buildPrompt(request);
     const npcName = request.context.name || 'NPC';
     const model = request.context.dalleModel || 'dall-e-3';
     const size = request.context.dalleSize || '1024x1024';

@@ -11,3 +11,5 @@ scripts/*.d.ts
 .env.test.local
 .env.production.local
 /dorman-lakelys-npc-generator.lock
+coverage/
+.nyc_output/

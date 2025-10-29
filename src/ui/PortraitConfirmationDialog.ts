@@ -1,5 +1,10 @@
 // Portrait generation confirmation dialog
-import { AIService, AIGenerationRequest, AIGenerationResponse } from '../services/AIService.js';
+import {
+  AIService,
+  AIGenerationRequest,
+  AIGenerationResponse,
+  OpenAIProvider
+} from '../services/AIService.js';
 
 const MODULE_ID = 'dorman-lakelys-npc-generator';
 
@@ -94,12 +99,37 @@ export class PortraitConfirmationDialog {
     const defaultStyle =
       ((game.settings as any)?.get(MODULE_ID, 'portraitArtStyle') as string) || 'fantasy painting';
 
+    // Generate initial prompt
+    const apiKey = ((game.settings as any)?.get(MODULE_ID, 'openaiApiKey') as string) || '';
+    const model = ((game.settings as any)?.get(MODULE_ID, 'openaiModel') as string) || 'gpt-4o-mini';
+    const provider = new OpenAIProvider(apiKey, model);
+
     return new Promise(resolve => {
       let dialogRef: Dialog;
       let isGenerating = false;
       let currentModel = 'gpt-image-1';
       let currentSize = '1024x1024';
       let currentQuality = 'medium';
+      let currentStyle = defaultStyle;
+      let currentPrompt = '';
+
+      // Function to regenerate prompt based on current settings
+      const regeneratePrompt = () => {
+        const contextWithOptions = {
+          ...context,
+          artStyle: currentStyle
+        };
+
+        const request: AIGenerationRequest = {
+          type: 'portrait',
+          context: contextWithOptions
+        };
+
+        currentPrompt = (provider as any).buildPrompt(request);
+      };
+
+      // Generate initial prompt
+      regeneratePrompt();
 
       const renderContent = (errorMsg?: string): string => {
         const cost = this.calculateCost(currentModel, currentSize, currentQuality);
@@ -147,8 +177,16 @@ export class PortraitConfirmationDialog {
               margin-bottom: 6px;
               font-weight: 600;
             }
-            .portrait-confirmation-dialog select {
+            .portrait-confirmation-dialog select,
+            .portrait-confirmation-dialog textarea {
               width: 100%;
+              box-sizing: border-box;
+            }
+            .portrait-confirmation-dialog textarea {
+              resize: vertical;
+              font-family: 'Signika', sans-serif;
+              font-size: 13px;
+              padding: 8px;
             }
             .portrait-confirmation-dialog .form-hint {
               font-size: 11px;
@@ -247,8 +285,14 @@ export class PortraitConfirmationDialog {
               <div class="form-group">
                 <label for="portrait-style">Art Style:</label>
                 <select id="portrait-style" name="style">
-                  ${this.ART_STYLES.map(s => `<option value="${s.value}" ${s.value === defaultStyle ? 'selected' : ''}>${s.label}</option>`).join('')}
+                  ${this.ART_STYLES.map(s => `<option value="${s.value}" ${s.value === currentStyle ? 'selected' : ''}>${s.label}</option>`).join('')}
                 </select>
+              </div>
+
+              <div class="form-group">
+                <label for="portrait-prompt">Image Prompt:</label>
+                <textarea id="portrait-prompt" name="prompt" rows="6">${currentPrompt}</textarea>
+                <p class="form-hint">Edit the prompt to customize the generated image. Changes will be used for generation.</p>
               </div>
             `
             }
@@ -258,6 +302,12 @@ export class PortraitConfirmationDialog {
 
       const updateDialog = (errorMsg?: string) => {
         if (dialogRef) {
+          // Save current prompt value before re-rendering
+          const promptTextarea = dialogRef.element.find('#portrait-prompt')[0] as HTMLTextAreaElement;
+          if (promptTextarea) {
+            currentPrompt = promptTextarea.value;
+          }
+
           dialogRef.data.content = renderContent(errorMsg);
           dialogRef.render(true);
 
@@ -268,6 +318,7 @@ export class PortraitConfirmationDialog {
               const modelSelect = html.find('#portrait-model');
               const sizeSelect = html.find('#portrait-size');
               const qualitySelect = html.find('#portrait-quality');
+              const styleSelect = html.find('#portrait-style');
 
               modelSelect.off('change').on('change', (e: any) => {
                 currentModel = e.target.value;
@@ -295,6 +346,12 @@ export class PortraitConfirmationDialog {
                 currentQuality = e.target.value;
                 updateDialog();
               });
+
+              styleSelect.off('change').on('change', (e: any) => {
+                currentStyle = e.target.value;
+                regeneratePrompt();
+                updateDialog();
+              });
             }, 50); // Increased timeout to ensure render completes
           }
         }
@@ -303,8 +360,8 @@ export class PortraitConfirmationDialog {
       const handleConfirm = async (html: JQuery) => {
         if (isGenerating) return;
 
-        const styleSelect = html.find('#portrait-style')[0] as HTMLSelectElement;
-        const selectedStyle = styleSelect?.value || defaultStyle;
+        const promptTextarea = html.find('#portrait-prompt')[0] as HTMLTextAreaElement;
+        const editedPrompt = promptTextarea?.value || currentPrompt;
 
         isGenerating = true;
         updateDialog();
@@ -313,12 +370,20 @@ export class PortraitConfirmationDialog {
         html.closest('.dialog').find('button').prop('disabled', true);
 
         try {
+          const cost = this.calculateCost(currentModel, currentSize, currentQuality);
+
+          ui.notifications?.info(
+            `Generating portrait... This will cost approximately $${cost.toFixed(3)} and may take 15-30 seconds.`,
+            { permanent: false }
+          );
+
           const contextWithOptions = {
             ...context,
-            artStyle: selectedStyle,
+            artStyle: currentStyle,
             dalleModel: currentModel,
             dalleSize: currentSize,
-            dalleQuality: currentQuality
+            dalleQuality: currentQuality,
+            customPrompt: editedPrompt
           };
 
           const request: AIGenerationRequest = {

@@ -21,6 +21,10 @@ export interface AIGenerationRequest {
     personality?: string;
     flavor?: string;
     artStyle?: string; // Optional art style override for portrait generation
+    dalleModel?: string; // 'dall-e-3', 'gpt-image-1', 'dall-e-2'
+    dalleSize?: string; // '1024x1024', '1024x1792', etc.
+    dalleQuality?: string; // 'standard', 'hd', 'medium', 'high', 'auto'
+    biography?: string; // For physical description in portrait prompts
   };
 }
 
@@ -41,12 +45,8 @@ export interface AIGenerationResponse {
 export abstract class AIProvider {
   abstract generateContent(request: AIGenerationRequest): Promise<AIGenerationResponse>;
 
-  /**
-   * Build a prompt based on request type
-   */
   protected buildPrompt(request: AIGenerationRequest): string {
     const { type, context } = request;
-
     let prompt = '';
     switch (type) {
       case 'name':
@@ -61,20 +61,42 @@ export abstract class AIProvider {
       default:
         prompt = '';
     }
-
-    // Log the prompt
+    // Final safety pass
+    prompt = this.sanitizeForPolicy(prompt);
     console.log("Dorman Lakely's NPC Gen | AI Prompt:", prompt);
     return prompt;
+  }
+
+  /** Remove/replace risky IP terms that can trigger refusals */
+  private sanitizeForPolicy(text: string): string {
+    const banned = [
+      /d&d/gi,
+      /dnd/gi,
+      /dungeons\s*&\s*dragons/gi,
+      /wizards of the coast/gi,
+      /wotc/gi,
+      /forgotten realms/gi,
+      /greyhawk/gi,
+      /eberron/gi,
+      /faer[uú]n/gi,
+      /monster manual/gi,
+      /player'?s? handbook/gi,
+      /dungeon master'?s? guide/gi,
+      /baldur'?s? gate/gi
+    ];
+    let out = text;
+    for (const re of banned) out = out.replace(re, 'tabletop fantasy role-playing');
+    return out;
   }
 
   private buildNamePrompt(context: any): string {
     const flavorContext = context.flavor ? `\n- Campaign Flavor: ${context.flavor}` : '';
     const genderContext = context.gender ? `\n- Gender: ${context.gender}` : '';
-    return `Generate 1 creative and appropriate name for a D&D 5e NPC with these characteristics:
+    return `Generate 1 evocative, setting-agnostic name for a tabletop fantasy role-playing NPC with these characteristics:
 - Role: ${context.role || 'Fighter'}
 - Alignment: ${context.alignment || 'Neutral'}${genderContext}${flavorContext}
 
-Provide ONLY the name, nothing else. No explanation, numbering, or extra text. Just the name.`;
+Provide ONLY the name—no extra text.`;
   }
 
   private buildBiographyPrompt(context: any): string {
@@ -84,32 +106,26 @@ Provide ONLY the name, nothing else. No explanation, numbering, or extra text. J
     const bondInfo = context.bond ? `\n- Bond: ${context.bond}` : '';
     const genderInfo = context.gender ? `\n- Gender: ${context.gender}` : '';
 
-    return `Create a brief biography for a D&D 5e NPC with these characteristics:
+    return `Create a brief biography for a tabletop fantasy role-playing NPC with these characteristics:
 ${context.name ? `- Name: ${context.name}` : ''}
 - Role: ${context.role || 'Fighter'}
 - Alignment: ${context.alignment || 'Neutral'}
 - Challenge Rating: ${context.challengeRating || '1'}${genderInfo}${flavorInfo}${personalityInfo}${idealInfo}${bondInfo}
 ${context.biography ? `- Existing notes: ${context.biography}` : ''}
 
-Write TWO paragraphs:
+Write TWO paragraphs in HTML:
 
-FIRST PARAGRAPH (3-5 sentences):
-1. Who they are and their background
-2. How their personality and ideals shape their demeanor
-${context.flavor ? `3. Elements appropriate to the ${context.flavor} setting` : ''}
+<p> (3–5 sentences)
+• Who they are and background • How personality/ideals shape demeanor ${context.flavor ? `• Elements appropriate to the ${context.flavor} tone` : ''}</p>
 
-SECOND PARAGRAPH (2-3 sentences):
-1. Physical appearance and distinguishing features
-2. Notable characteristics that would be visible in a portrait
-3. Clothing or equipment that defines their appearance
+<p> (2–3 sentences)
+• Physical appearance & distinguishing features • Portrait-visible details • Clothing/equipment that define the silhouette</p>
 
-${context.flavor ? `IMPORTANT: Incorporate elements from the ${context.flavor} flavor/setting, but DO NOT mention specific locations that may conflict with the GM's world.` : 'IMPORTANT: DO NOT mention any specific locations, place names, cities, forests, or geographical features. Keep the description generic so it fits any campaign setting.'}
-
-Format the output as HTML with TWO separate <p> tags. Return ONLY the HTML paragraphs, no other text.`;
+IMPORTANT: Do NOT use named IP (no brands, books, places). Keep it generic to fit any campaign. Return ONLY the two <p> tags.`;
   }
 
+  /** Strong, policy-safe prompt for image generation */
   protected buildPortraitPrompt(context: any): string {
-    // Use art style from context (modal selection) or fall back to settings
     const artStyle =
       context.artStyle ||
       ((game.settings as any)?.get(MODULE_ID, 'portraitArtStyle') as string) ||
@@ -120,65 +136,71 @@ Format the output as HTML with TWO separate <p> tags. Return ONLY the HTML parag
     const role = context.role || 'adventurer';
     const species = context.species || 'human';
     const personality = context.personality || '';
-    const flavor = context.flavor || '';
+    const flavor = context.flavor || ''; // e.g., "Norse", "Gothic", "Desert caravan", etc.
     const biography = context.biography || '';
 
-    // Build descriptive prompt for DALL-E (excluding alignment to avoid content policy issues)
-    let prompt = `A character portrait of a ${species} ${role}`;
+    // Style presets that evoke "book art" without naming brands
+    const stylePresets: Record<string, string> = {
+      'fantasy painting': [
+        'studio-painted character portrait',
+        'ink-and-wash linework with painted glazing',
+        'subtle halftone texture and parchment patina',
+        'clean silhouette, readable shapes, crisp edge control',
+        'color script: jewel tones with muted shadows',
+        'medium: digital gouache + pencil lineart'
+      ].join(', '),
+      'oil portrait': [
+        'oil-on-canvas brushwork',
+        'impasto highlights and soft diffusion',
+        'Baroque rim light, painterly edges'
+      ].join(', '),
+      watercolor: [
+        'watercolor on cold-press cotton',
+        'granulation and drybrush details',
+        'inked contours'
+      ].join(', ')
+    };
 
-    // Add gender if specified
-    if (gender) {
-      prompt += `, ${gender.toLowerCase()}`;
-    }
+    const stylePreset = stylePresets[artStyle] || artStyle;
 
-    // Add name if specified
-    if (name) {
-      prompt += ` named ${name}`;
-    }
+    let prompt = [
+      // Core subject
+      `Original character portrait for a tabletop fantasy role-playing game`,
+      `a ${species} ${role}${gender ? `, ${gender.toLowerCase()}` : ''}${name ? `, named ${name}` : ''}`,
+      flavor ? `in a ${flavor} tone` : '',
+      // Framing & readability for VTT / book feel
+      `square composition, head-and-shoulders to mid-torso`,
+      `heroic, front three-quarter view, camera at eye level`,
+      `dramatic chiaroscuro rim light, background out of focus`,
+      // Book-art stylization
+      `${stylePreset}`,
+      `highly readable face, expressive eyes, subtle pore-level detail`,
+      `clean rendering, no heavy motion blur, no posterization`,
+      // Safety & IP guardrails (helps avoid refusals)
+      `make everything fully original, do not reference or depict copyrighted characters, logos, or trademarked brands`
+    ]
+      .filter(Boolean)
+      .join(', ');
 
-    // Add flavor-specific context
-    if (flavor) {
-      prompt += ` in a ${flavor} setting`;
-    }
+    if (personality) prompt += `, ${personality} expression`;
 
-    prompt += `, ${artStyle} style`;
-
-    // Add more flavor context if available
-    if (flavor) {
-      prompt += `, ${flavor} inspired`;
-    }
-
-    prompt += `, head and shoulders, detailed face, dramatic lighting`;
-
-    if (personality) {
-      prompt += `, ${personality} expression`;
-    }
-
-    // Add physical description from biography if available
+    // Pull physical details from second <p> of the biography
     if (biography) {
-      // Extract text from the second paragraph (physical description)
-      // Biography should have two <p> tags: first for story, second for physical description
-      const paragraphMatch = biography.match(/<p[^>]*>([\s\S]*?)<\/p>/g);
-
-      if (paragraphMatch && paragraphMatch.length >= 2) {
-        // Get second paragraph (physical description)
-        const physicalPara = paragraphMatch[1].replace(/<[^>]*>/g, '').trim();
-        if (physicalPara) {
-          // Limit to 400 characters
-          const excerpt = physicalPara.substring(0, 400);
-          prompt += `. Physical appearance: ${excerpt}`;
-        }
-      } else if (paragraphMatch && paragraphMatch.length === 1) {
-        // Fallback: if only one paragraph, use it but limit length
-        const bioText = paragraphMatch[0].replace(/<[^>]*>/g, '').trim();
-        if (bioText) {
-          const excerpt = bioText.substring(0, 400);
-          prompt += `. Physical appearance: ${excerpt}`;
-        }
+      const matches = biography.match(/<p[^>]*>([\s\S]*?)<\/p>/g);
+      const toText = (s: string) => s.replace(/<[^>]*>/g, '').trim();
+      let physical = '';
+      if (matches?.length >= 2) physical = toText(matches[1]);
+      else if (matches?.length === 1) physical = toText(matches[0]);
+      if (physical) {
+        const excerpt = physical.substring(0, 400);
+        prompt += `. Physical appearance details: ${excerpt}`;
       }
     }
 
-    return prompt;
+    // VTT-friendly final touches
+    prompt += `, centered subject, neutral backdrop with light vignette, no text, no watermark, ultra-high detail`;
+
+    return this.sanitizeForPolicy(prompt);
   }
 }
 
@@ -297,14 +319,57 @@ export class OpenAIProvider extends AIProvider {
   }
 
   /**
+   * Truncate prompt to fit model's character limits
+   */
+  private truncatePromptForModel(prompt: string, model: string): string {
+    // Character limits for different models
+    const limits: Record<string, number> = {
+      'dall-e-3': 4000,
+      'gpt-image-1': 4000,
+      'dall-e-2': 1000
+    };
+
+    const maxLength = limits[model] || 4000;
+
+    if (prompt.length <= maxLength) {
+      return prompt;
+    }
+
+    // Truncate intelligently - keep the core description and remove the physical details
+    console.warn(
+      `Dorman Lakely's NPC Gen | Prompt too long (${prompt.length} chars), truncating to ${maxLength} chars for ${model}`
+    );
+
+    // Try to find the physical appearance section and truncate it first
+    const physicalMarker = '. Physical appearance details:';
+    if (prompt.includes(physicalMarker)) {
+      const beforePhysical = prompt.split(physicalMarker)[0];
+      const afterPhysical = prompt.split(physicalMarker)[1] || '';
+
+      // If we can fit everything except physical details, do that
+      if (beforePhysical.length <= maxLength - 50) {
+        // Keep some physical details but truncate them
+        const remainingSpace = maxLength - beforePhysical.length - physicalMarker.length;
+        return beforePhysical + physicalMarker + afterPhysical.substring(0, remainingSpace);
+      }
+    }
+
+    // Otherwise, just hard truncate with ellipsis
+    return prompt.substring(0, maxLength - 3) + '...';
+  }
+
+  /**
    * Generate portrait image using DALL-E
    */
   async generatePortraitImage(request: AIGenerationRequest): Promise<AIGenerationResponse> {
-    const prompt = this.buildPrompt(request);
+    let prompt = this.buildPrompt(request);
     const npcName = request.context.name || 'NPC';
     const model = request.context.dalleModel || 'dall-e-3';
     const size = request.context.dalleSize || '1024x1024';
     const quality = request.context.dalleQuality || 'standard';
+
+    // Apply model-specific prompt length limits
+    prompt = this.truncatePromptForModel(prompt, model);
 
     try {
       // DALL-E API endpoint

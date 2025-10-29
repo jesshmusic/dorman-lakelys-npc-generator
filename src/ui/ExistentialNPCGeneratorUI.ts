@@ -49,6 +49,7 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
     const aiEnabled = ((game.settings as any)?.get(MODULE_ID, 'enableAI') as boolean) || false;
 
     return {
+      species: NPCGenerator.SPECIES,
       flavors: NPCGenerator.FLAVORS,
       genders: NPCGenerator.GENDERS,
       roles: NPCGenerator.ROLES,
@@ -95,6 +96,25 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
     if (tokenInput) {
       tokenInput.addEventListener('input', () => this._updateImagePreview('token'));
     }
+
+    // Set up personality pill selection
+    const personalityPills = this.element.querySelectorAll('.personality-pill');
+    const personalityInput = this.element.querySelector('#npc-personality') as HTMLInputElement;
+
+    personalityPills.forEach((pill: Element) => {
+      (pill as HTMLElement).onclick = () => {
+        pill.classList.toggle('selected');
+
+        // Update hidden input with comma-separated values
+        const selectedPills = Array.from(
+          this.element.querySelectorAll('.personality-pill.selected')
+        ).map((p: Element) => (p as HTMLElement).dataset.trait);
+
+        if (personalityInput) {
+          personalityInput.value = selectedPills.join(', ');
+        }
+      };
+    });
   }
 
   /**

@@ -26,6 +26,16 @@
         </select>
     </div>
 
+    <!-- Species -->
+    <div class="form-group">
+        <label for="npc-species">Species</label>
+        <select id="npc-species" name="species">
+            {{#each species}}
+            <option value="{{this}}">{{this}}</option>
+            {{/each}}
+        </select>
+    </div>
+
     <!-- Gender -->
     <div class="form-group">
         <label for="npc-gender">Gender</label>
@@ -78,13 +88,15 @@
 
     <!-- Personality -->
     <div class="form-group">
-        <label for="npc-personality">Personality</label>
-        <select id="npc-personality" name="personality">
-            <option value="">-- Select Personality --</option>
+        <label>Personality Traits</label>
+        <div class="personality-pills" id="personality-pills">
             {{#each personalities}}
-            <option value="{{this}}">{{this}}</option>
+            <button type="button" class="personality-pill" data-trait="{{this}}">
+                {{this}}
+            </button>
             {{/each}}
-        </select>
+        </div>
+        <input type="hidden" id="npc-personality" name="personality" value="" />
     </div>
 
     <!-- Biography -->

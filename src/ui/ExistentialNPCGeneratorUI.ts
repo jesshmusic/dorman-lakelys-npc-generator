@@ -97,24 +97,122 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
       tokenInput.addEventListener('input', () => this._updateImagePreview('token'));
     }
 
-    // Set up personality pill selection
-    const personalityPills = this.element.querySelectorAll('.personality-pill');
+    // Set up personality multi-select dropdown
+    this._setupPersonalityDropdown();
+  }
+
+  /**
+   * Set up personality multi-select dropdown
+   */
+  private _setupPersonalityDropdown(): void {
+    const dropdownSelect = this.element.querySelector('.multiple-dropdown-select');
+    const dropdownToggle = this.element.querySelector('.multiple-dropdown');
+    const dropdownList = this.element.querySelector('.dropdown-list');
     const personalityInput = this.element.querySelector('#npc-personality') as HTMLInputElement;
+    const contentArea = this.element.querySelector('#personality-selected') as HTMLElement;
 
-    personalityPills.forEach((pill: Element) => {
-      (pill as HTMLElement).onclick = () => {
-        pill.classList.toggle('selected');
+    if (!dropdownSelect || !dropdownToggle || !dropdownList || !personalityInput) return;
 
-        // Update hidden input with comma-separated values
-        const selectedPills = Array.from(
-          this.element.querySelectorAll('.personality-pill.selected')
-        ).map((p: Element) => (p as HTMLElement).dataset.trait);
+    // Toggle dropdown on click
+    (dropdownToggle as HTMLElement).onclick = (event: Event) => {
+      event.stopPropagation();
+      dropdownList.classList.toggle('open');
+    };
 
-        if (personalityInput) {
-          personalityInput.value = selectedPills.join(', ');
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (event: Event) => {
+      if (!dropdownSelect.contains(event.target as Node)) {
+        dropdownList.classList.remove('open');
+      }
+    });
+
+    // Handle item selection
+    const items = dropdownList.querySelectorAll('.multiple-dropdown-item');
+    items.forEach((item: Element) => {
+      (item as HTMLElement).onclick = (event: Event) => {
+        event.stopPropagation();
+        const value = (item as HTMLElement).dataset.value;
+        if (!value) return;
+
+        const currentValues = personalityInput.value
+          .split(',')
+          .map(v => v.trim())
+          .filter(v => v);
+
+        if (currentValues.includes(value)) {
+          // Remove trait
+          const newValues = currentValues.filter(v => v !== value);
+          personalityInput.value = newValues.join(', ');
+          item.classList.remove('selected');
+          this._removePersonalityPill(value);
+        } else {
+          // Add trait
+          currentValues.push(value);
+          personalityInput.value = currentValues.join(', ');
+          item.classList.add('selected');
+          this._addPersonalityPill(value);
         }
+
+        dropdownList.classList.remove('open');
       };
     });
+  }
+
+  /**
+   * Add a personality pill to the display
+   */
+  private _addPersonalityPill(value: string): void {
+    const contentArea = this.element.querySelector('#personality-selected') as HTMLElement;
+    if (!contentArea) return;
+
+    const pill = document.createElement('div');
+    pill.className = 'multiple-dropdown-option flexrow';
+    pill.dataset.value = value;
+
+    const span = document.createElement('span');
+    span.textContent = value;
+    pill.appendChild(span);
+
+    const removeBtn = document.createElement('div');
+    removeBtn.className = 'remove-option';
+    removeBtn.innerHTML = '&times;';
+    removeBtn.onclick = (event: Event) => {
+      event.stopPropagation();
+      this._removePersonalityTrait(value);
+    };
+    pill.appendChild(removeBtn);
+
+    contentArea.appendChild(pill);
+  }
+
+  /**
+   * Remove a personality pill from the display
+   */
+  private _removePersonalityPill(value: string): void {
+    const pill = this.element.querySelector(`.multiple-dropdown-option[data-value="${value}"]`);
+    if (pill) pill.remove();
+  }
+
+  /**
+   * Remove a personality trait (from pill remove button)
+   */
+  private _removePersonalityTrait(value: string): void {
+    const personalityInput = this.element.querySelector('#npc-personality') as HTMLInputElement;
+    if (!personalityInput) return;
+
+    const currentValues = personalityInput.value
+      .split(',')
+      .map(v => v.trim())
+      .filter(v => v && v !== value);
+
+    personalityInput.value = currentValues.join(', ');
+
+    // Remove pill from display
+    this._removePersonalityPill(value);
+
+    // Remove selected state from dropdown item
+    const item = this.element.querySelector(`.multiple-dropdown-item[data-value="${value}"]`);
+    if (item) item.classList.remove('selected');
   }
 
   /**

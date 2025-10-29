@@ -89,14 +89,22 @@
     <!-- Personality -->
     <div class="form-group">
         <label>Personality Traits</label>
-        <div class="personality-pills" id="personality-pills">
-            {{#each personalities}}
-            <button type="button" class="personality-pill" data-trait="{{this}}">
-                {{this}}
-            </button>
-            {{/each}}
-        </div>
         <input type="hidden" id="npc-personality" name="personality" value="" />
+        <div class="multiple-dropdown-select">
+            <div class="multiple-dropdown flexrow">
+                <div class="multiple-dropdown-content" id="personality-selected">
+                    <!-- Selected traits appear here as pills -->
+                </div>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <ul class="dropdown-list">
+                {{#each personalities}}
+                <li class="multiple-dropdown-item" data-value="{{this}}">
+                    {{this}}
+                </li>
+                {{/each}}
+            </ul>
+        </div>
     </div>
 
     <!-- Biography -->

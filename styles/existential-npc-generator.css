@@ -348,44 +348,101 @@
     margin-bottom: 1rem;
 }
 
-/* Personality Pills */
-.personality-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.375rem;
-    padding: 0.5rem;
+/* Multiple Dropdown Select (Monk's Active Tiles style) */
+.multiple-dropdown-select {
+    position: relative;
+}
+
+.multiple-dropdown {
+    min-height: 32px;
     background: var(--color-bg-option);
     border: 1px solid var(--color-border-dark);
     border-radius: 4px;
-    max-height: 200px;
-    overflow-y: auto;
-}
-
-.personality-pill {
-    padding: 0.375rem 0.75rem;
-    background: var(--color-bg-btn-minor-inactive);
-    border: 1px solid var(--color-border-dark);
-    border-radius: 12px;
-    font-size: var(--font-size-12);
+    padding: 4px 8px;
     cursor: pointer;
     transition: all 0.2s ease;
+}
+
+.multiple-dropdown:hover {
+    border-color: var(--color-border-highlight-alt);
+}
+
+.multiple-dropdown-content {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-height: 24px;
+}
+
+.multiple-dropdown > i {
+    flex: 0 0 14px;
+    text-align: center;
+    line-height: 24px;
+    font-size: 11px;
+    color: var(--color-text-dark-secondary);
+}
+
+.multiple-dropdown-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: #333;
+    border-radius: 4px;
+    padding: 2px 6px;
+    border: 1px solid #777;
+    font-size: var(--font-size-12);
     white-space: nowrap;
 }
 
-.personality-pill:hover {
-    background: var(--color-bg-btn-minor-hover);
-    border-color: var(--color-border-highlight-alt);
-    transform: translateY(-1px);
+.multiple-dropdown-option .remove-option {
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 12px;
+    font-weight: bold;
+    color: var(--color-text-dark-secondary);
+    transition: color 0.2s ease;
 }
 
-.personality-pill.selected {
+.multiple-dropdown-option .remove-option:hover {
+    color: var(--color-text-light-highlight);
+}
+
+.multiple-dropdown-select .dropdown-list {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 250px;
+    overflow-y: auto;
+    margin: 4px 0 0 0;
+    padding: 0;
+    background: var(--color-bg-option);
+    border: 1px solid var(--color-border-dark);
+    border-radius: 4px;
+    list-style: none;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.multiple-dropdown-select .dropdown-list.open {
+    display: block;
+}
+
+.multiple-dropdown-select .dropdown-list .multiple-dropdown-item {
+    padding: 6px 8px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.multiple-dropdown-select .dropdown-list .multiple-dropdown-item:hover {
+    background-color: var(--color-bg-btn-minor-hover);
+}
+
+.multiple-dropdown-select .dropdown-list .multiple-dropdown-item.selected {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-color: #5a67d8;
     color: #fff;
     font-weight: bold;
-}
-
-.personality-pill.selected:hover {
-    background: linear-gradient(135deg, #5a67d8 0%, #6b46a0 100%);
-    box-shadow: 0 0 8px rgba(102, 126, 234, 0.4);
 }

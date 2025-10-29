@@ -105,23 +105,24 @@ Provide ONLY the name—no extra text.`;
     const idealInfo = context.ideal ? `\n- Ideal: ${context.ideal}` : '';
     const bondInfo = context.bond ? `\n- Bond: ${context.bond}` : '';
     const genderInfo = context.gender ? `\n- Gender: ${context.gender}` : '';
+    const speciesInfo = context.species ? `\n- Species: ${context.species}` : '';
 
     return `Create a brief biography for a tabletop fantasy role-playing NPC with these characteristics:
 ${context.name ? `- Name: ${context.name}` : ''}
 - Role: ${context.role || 'Fighter'}
 - Alignment: ${context.alignment || 'Neutral'}
-- Challenge Rating: ${context.challengeRating || '1'}${genderInfo}${flavorInfo}${personalityInfo}${idealInfo}${bondInfo}
+- Challenge Rating: ${context.challengeRating || '1'}${speciesInfo}${genderInfo}${flavorInfo}${personalityInfo}${idealInfo}${bondInfo}
 ${context.biography ? `- Existing notes: ${context.biography}` : ''}
 
 Write TWO paragraphs in HTML:
 
-<p> (3–5 sentences)
+<p> (EXACTLY 2 sentences)
 • Who they are and background • How personality/ideals shape demeanor ${context.flavor ? `• Elements appropriate to the ${context.flavor} tone` : ''}</p>
 
-<p> (2–3 sentences)
-• Physical appearance & distinguishing features • Portrait-visible details • Clothing/equipment that define the silhouette</p>
+<p> (EXACTLY 1 sentence)
+• Physical appearance & distinguishing features${speciesInfo ? ` • Include ${context.species}-specific traits (ears, tusks, scales, fur, size, proportions, etc.)` : ''} • Portrait-visible details • Clothing/equipment that define the silhouette</p>
 
-IMPORTANT: Do NOT use named IP (no brands, books, places). Keep it generic to fit any campaign. Return ONLY the two <p> tags.`;
+IMPORTANT: Do NOT use named IP (no brands, books, places). Keep it generic to fit any campaign. Return ONLY the two <p> tags. Be concise - stick to the exact sentence counts.`;
   }
 
   /** Strong, policy-safe prompt for image generation */
@@ -219,6 +220,25 @@ export class OpenAIProvider extends AIProvider {
     this.model = model;
   }
 
+  /**
+   * Get temperature setting based on request type
+   */
+  private getTemperatureForType(type: 'name' | 'biography' | 'portrait'): number {
+    const settingMap = {
+      name: 'nameTemperature',
+      biography: 'bioTemperature',
+      portrait: 'portraitTemperature'
+    };
+
+    const settingKey = settingMap[type];
+    const temperature = ((game.settings as any)?.get(MODULE_ID, settingKey) as number) || 0.8;
+
+    console.log(
+      `Dorman Lakely's NPC Gen | Using temperature ${temperature} for ${type} generation`
+    );
+    return temperature;
+  }
+
   async generateContent(request: AIGenerationRequest): Promise<AIGenerationResponse> {
     if (!this.apiKey) {
       return {
@@ -234,6 +254,7 @@ export class OpenAIProvider extends AIProvider {
     }
 
     const prompt = this.buildPrompt(request);
+    const temperature = this.getTemperatureForType(request.type);
 
     try {
       // Use CORS proxy for browser access
@@ -252,7 +273,7 @@ export class OpenAIProvider extends AIProvider {
             content: prompt
           }
         ],
-        temperature: 0.8,
+        temperature: temperature,
         max_tokens: 500
       };
 

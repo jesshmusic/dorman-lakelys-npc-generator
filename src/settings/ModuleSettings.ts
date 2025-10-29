@@ -52,4 +52,47 @@ export function registerSettings(): void {
     },
     default: 'fantasy painting'
   });
+
+  // Temperature/Randomness Settings
+  (game.settings as any)?.register(MODULE_ID, 'nameTemperature', {
+    name: 'Name Generation Randomness',
+    hint: 'Controls creativity for name generation (0.0 = consistent, 2.0 = very random). Higher values produce more varied and creative names.',
+    scope: 'world',
+    config: true,
+    type: Number,
+    range: {
+      min: 0.0,
+      max: 2.0,
+      step: 0.1
+    },
+    default: 1.0
+  });
+
+  (game.settings as any)?.register(MODULE_ID, 'bioTemperature', {
+    name: 'Biography Generation Randomness',
+    hint: 'Controls creativity for biography generation (0.0 = consistent, 2.0 = very random). Higher values produce more varied and creative biographies.',
+    scope: 'world',
+    config: true,
+    type: Number,
+    range: {
+      min: 0.0,
+      max: 2.0,
+      step: 0.1
+    },
+    default: 0.8
+  });
+
+  (game.settings as any)?.register(MODULE_ID, 'portraitTemperature', {
+    name: 'Portrait Prompt Randomness',
+    hint: 'Controls creativity for portrait prompt generation (0.0 = consistent, 2.0 = very random). Note: This affects the prompt text, not the image model itself.',
+    scope: 'world',
+    config: true,
+    type: Number,
+    range: {
+      min: 0.0,
+      max: 2.0,
+      step: 0.1
+    },
+    default: 0.9
+  });
 }

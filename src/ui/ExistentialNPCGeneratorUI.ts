@@ -302,6 +302,7 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
    */
   _getFormContext(): any {
     const flavorSelect = this.element.querySelector('#npc-flavor') as HTMLSelectElement;
+    const speciesSelect = this.element.querySelector('#npc-species') as HTMLSelectElement;
     const nameInput = this.element.querySelector('#npc-name') as HTMLInputElement;
     const genderSelect = this.element.querySelector('#npc-gender') as HTMLSelectElement;
     const roleSelect = this.element.querySelector('#npc-role') as HTMLSelectElement;
@@ -316,6 +317,7 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
 
     return {
       flavor: flavorSelect?.value,
+      species: speciesSelect?.value,
       name: nameInput?.value,
       gender: genderSelect?.value,
       role: roleSelect?.value,

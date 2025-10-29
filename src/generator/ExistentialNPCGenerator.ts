@@ -35,10 +35,13 @@ export interface NPC {
     gp: number;
     pp: number;
   };
+  portrait?: string;
+  token?: string;
 }
 
 export class NPCGenerator {
   static readonly SPECIES = [
+    // Common PC Races
     'Human',
     'Elf',
     'Dwarf',
@@ -48,9 +51,84 @@ export class NPCGenerator {
     'Half-Orc',
     'Tiefling',
     'Dragonborn',
+    // Exotic PC Races
+    'Aarakocra',
+    'Firbolg',
+    'Genasi',
+    'Goliath',
+    'Kenku',
+    'Tabaxi',
+    'Triton',
+    'Tortle',
+    'Yuan-ti Pureblood',
+    // Monstrous Humanoids
     'Goblin',
+    'Hobgoblin',
+    'Bugbear',
     'Orc',
-    'Kobold'
+    'Kobold',
+    'Gnoll',
+    'Lizardfolk',
+    'Bullywug',
+    'Grung',
+    'Troglodyte',
+    // Large Humanoids
+    'Ogre',
+    'Troll',
+    'Minotaur',
+    'Centaur',
+    // Fey Humanoids
+    'Satyr',
+    'Changeling'
+  ];
+
+  static readonly FLAVORS = [
+    // Campaign Settings
+    'Forgotten Realms',
+    'Greyhawk',
+    'Eberron',
+    'Dragonlance',
+    'Dark Sun',
+    'Ravenloft',
+    'Curse of Strahd',
+    'Icewind Dale',
+    'Waterdeep',
+    "Baldur's Gate",
+    'Spelljammer',
+    'Planescape',
+    // Generic/Historical Flavors
+    'Viking',
+    'Celtic',
+    'Medieval European',
+    'Arabian Nights',
+    'Ancient Greek',
+    'Ancient Roman',
+    'Egyptian',
+    'Asian (Wuxia)',
+    'Samurai',
+    'Wild West',
+    'Pirate',
+    'Post-Apocalyptic',
+    'Steampunk',
+    'Gothic Horror',
+    'Cosmic Horror',
+    'Fairy Tale',
+    'Arthurian',
+    'Nordic/Norse',
+    'Polynesian',
+    'Aztec/Mayan',
+    'Swashbuckler',
+    'Noir Detective'
+  ];
+
+  static readonly GENDERS = [
+    'Male',
+    'Female',
+    'Non-binary',
+    'Androgynous',
+    'Genderfluid',
+    'Agender',
+    'Other'
   ];
 
   static readonly ALIGNMENTS = [
@@ -102,23 +180,178 @@ export class NPCGenerator {
     '30'
   ];
 
-  static readonly CLASSES = [
+  static readonly ROLES = [
+    // Adventurer Classes
+    'Fighter',
     'Barbarian',
-    'Bard',
+    'Wizard',
+    'Sorcerer',
     'Cleric',
     'Druid',
-    'Fighter',
-    'Monk',
-    'Paladin',
-    'Ranger',
     'Rogue',
-    'Sorcerer',
+    'Ranger',
+    'Paladin',
+    'Monk',
+    'Bard',
     'Warlock',
-    'Wizard'
+    // Adventure NPCs
+    'Spy',
+    'Assassin',
+    'Bounty Hunter',
+    'Smuggler',
+    'Pirate',
+    'Bandit',
+    'Mercenary',
+    'Explorer',
+    'Sailor',
+    'Criminal Contact',
+    // Authority & Leadership
+    'Noble',
+    'Guildmaster',
+    'Diplomat',
+    'Politician',
+    'City Guard',
+    'Guard Captain',
+    'Town Crier',
+    'Tax Collector',
+    // Religion & Magic
+    'Priest',
+    'Acolyte',
+    'Healer',
+    'Alchemist',
+    'Herbalist',
+    'Fortune Teller',
+    // Merchants & Traders
+    'Merchant',
+    'Pawnbroker',
+    'Jeweler',
+    'Fence',
+    'Caravan Master',
+    // Artisans & Crafters
+    'Blacksmith',
+    'Armorer',
+    'Weaponsmith',
+    'Fletcher',
+    'Leatherworker',
+    'Jeweler (Artisan)',
+    // Service & Hospitality
+    'Innkeeper',
+    'Tavern Keeper',
+    'Cook',
+    'Barkeep',
+    'Stable Master',
+    'Guide',
+    // Scholars & Artists
+    'Scholar',
+    'Scribe',
+    'Cartographer',
+    'Librarian',
+    'Sage',
+    'Minstrel',
+    'Entertainer',
+    'Artist',
+    // Common Folk
+    'Farmer',
+    'Fisherman',
+    'Miner',
+    'Beggar',
+    'Street Urchin',
+    'Servant',
+    'Laborer',
+    // Outcasts & Criminals
+    'Thief',
+    'Cultist',
+    'Witch',
+    'Hermit',
+    'Exile'
+  ];
+
+  static readonly PERSONALITIES = [
+    'Aggressive',
+    'Ambitious',
+    'Anxious',
+    'Arrogant',
+    'Cautious',
+    'Charismatic',
+    'Cheerful',
+    'Confident',
+    'Cowardly',
+    'Cruel',
+    'Cunning',
+    'Curious',
+    'Cynical',
+    'Deceitful',
+    'Eccentric',
+    'Friendly',
+    'Greedy',
+    'Grim',
+    'Honest',
+    'Honorable',
+    'Idealistic',
+    'Impulsive',
+    'Inquisitive',
+    'Insightful',
+    'Lazy',
+    'Loyal',
+    'Mischievous',
+    'Mysterious',
+    'Naive',
+    'Optimistic',
+    'Paranoid',
+    'Patient',
+    'Pessimistic',
+    'Pragmatic',
+    'Proud',
+    'Quiet',
+    'Reckless',
+    'Reserved',
+    'Sarcastic',
+    'Secretive',
+    'Serious',
+    'Shy',
+    'Stubborn',
+    'Suspicious',
+    'Thoughtful',
+    'Vengeful',
+    'Wise',
+    'Witty'
+  ];
+
+  static readonly IDEALS = [
+    '<b>Beauty</b>. Life is meant to be beautiful. (Good)',
+    '<b>Charity</b>. I always help those in need. (Good)',
+    '<b>Community</b>. We must take care of each other. (Good)',
+    '<b>Fairness</b>. No one should be treated unfairly. (Good)',
+    '<b>Freedom</b>. Everyone should be free. (Chaotic)',
+    '<b>Glory</b>. I must earn glory in battle. (Any)',
+    '<b>Greater Good</b>. My gifts are meant to help others. (Good)',
+    '<b>Greed</b>. I will do anything to become wealthy. (Evil)',
+    '<b>Honor</b>. I keep my word. (Lawful)',
+    '<b>Independence</b>. I am a free spirit. (Chaotic)',
+    '<b>Knowledge</b>. The path to power is through knowledge. (Neutral)',
+    '<b>Power</b>. I will become the greatest. (Evil)',
+    '<b>Redemption</b>. There is a spark of good in everyone. (Good)',
+    '<b>Tradition</b>. The old ways must be preserved. (Lawful)'
+  ];
+
+  static readonly BONDS = [
+    'I would die to recover an ancient artifact that was stolen from me.',
+    'I will face any challenge to win the approval of my family.',
+    "My house's alliance with another house must be sustained.",
+    'Nothing is more important than the other members of my family.',
+    'I am in love with the heir of a family that my family despises.',
+    'I owe my life to someone who saved me from a terrible fate.',
+    'Someone I loved died because of a mistake I made.',
+    'My loyalty to my sovereign is unwavering.',
+    'The common folk must see me as a hero.',
+    'I have a family, but I have no idea where they are.',
+    'I worked the land, I love the land, and I will protect the land.',
+    'A proud noble once gave me a horrible beating, and I will take revenge.'
   ];
 
   private static getSpeed(species: string): NPC['speed'] {
     const speedMap: Record<string, NPC['speed']> = {
+      // Common PC Races
       Human: { walk: 30 },
       Elf: { walk: 30 },
       Dwarf: { walk: 25 },
@@ -128,15 +361,42 @@ export class NPCGenerator {
       'Half-Orc': { walk: 30 },
       Tiefling: { walk: 30 },
       Dragonborn: { walk: 30 },
+      // Exotic PC Races
+      Aarakocra: { walk: 25, fly: 50 },
+      Firbolg: { walk: 30 },
+      Genasi: { walk: 30 },
+      Goliath: { walk: 30 },
+      Kenku: { walk: 30 },
+      Tabaxi: { walk: 30, climb: 20 },
+      Triton: { walk: 30, swim: 30 },
+      Tortle: { walk: 30 },
+      'Yuan-ti Pureblood': { walk: 30 },
+      // Monstrous Humanoids
       Goblin: { walk: 30 },
+      Hobgoblin: { walk: 30 },
+      Bugbear: { walk: 30 },
       Orc: { walk: 30 },
-      Kobold: { walk: 30 }
+      Kobold: { walk: 30 },
+      Gnoll: { walk: 30 },
+      Lizardfolk: { walk: 30, swim: 30 },
+      Bullywug: { walk: 20, swim: 40 },
+      Grung: { walk: 25, climb: 25 },
+      Troglodyte: { walk: 30 },
+      // Large Humanoids
+      Ogre: { walk: 40 },
+      Troll: { walk: 30 },
+      Minotaur: { walk: 40 },
+      Centaur: { walk: 40 },
+      // Fey Humanoids
+      Satyr: { walk: 35 },
+      Changeling: { walk: 30 }
     };
     return speedMap[species] || { walk: 30 };
   }
 
   private static getLanguages(species: string): string[] {
     const languageMap: Record<string, string[]> = {
+      // Common PC Races
       Human: ['Common'],
       Elf: ['Common', 'Elvish'],
       Dwarf: ['Common', 'Dwarvish'],
@@ -146,9 +406,35 @@ export class NPCGenerator {
       'Half-Orc': ['Common', 'Orc'],
       Tiefling: ['Common', 'Infernal'],
       Dragonborn: ['Common', 'Draconic'],
+      // Exotic PC Races
+      Aarakocra: ['Common', 'Aarakocra', 'Auran'],
+      Firbolg: ['Common', 'Elvish', 'Giant'],
+      Genasi: ['Common', 'Primordial'],
+      Goliath: ['Common', 'Giant'],
+      Kenku: ['Common', 'Auran'],
+      Tabaxi: ['Common'],
+      Triton: ['Common', 'Primordial'],
+      Tortle: ['Common', 'Aquan'],
+      'Yuan-ti Pureblood': ['Common', 'Abyssal', 'Draconic'],
+      // Monstrous Humanoids
       Goblin: ['Common', 'Goblin'],
+      Hobgoblin: ['Common', 'Goblin'],
+      Bugbear: ['Common', 'Goblin'],
       Orc: ['Common', 'Orc'],
-      Kobold: ['Common', 'Draconic']
+      Kobold: ['Common', 'Draconic'],
+      Gnoll: ['Gnoll'],
+      Lizardfolk: ['Draconic'],
+      Bullywug: ['Bullywug'],
+      Grung: ['Grung'],
+      Troglodyte: ['Troglodyte'],
+      // Large Humanoids
+      Ogre: ['Common', 'Giant'],
+      Troll: ['Giant'],
+      Minotaur: ['Abyssal'],
+      Centaur: ['Elvish', 'Sylvan'],
+      // Fey Humanoids
+      Satyr: ['Common', 'Elvish', 'Sylvan'],
+      Changeling: ['Common']
     };
     return languageMap[species] || ['Common'];
   }
@@ -223,37 +509,118 @@ export class NPCGenerator {
     return abilityEntries.slice(0, numSaves).map(([ability]) => ability);
   }
 
-  private static generateAbilities(cr: string, species: string): NPC['abilities'] {
+  private static generateAbilities(cr: string, species: string, role: string): NPC['abilities'] {
     const stats = getCRStats(cr);
     const base = stats.baseAbilityScore;
-    const variance = 2;
+    const variance = 3; // Increased from 2 for more variety
 
-    // Apply species modifiers
+    // Apply species modifiers (based on D&D 5e racial traits)
     const speciesModifiers: Record<string, Partial<NPC['abilities']>> = {
+      // Common PC Races
       Human: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
-      Elf: { dex: 2 },
-      Dwarf: { con: 2 },
-      Halfling: { dex: 2 },
-      Gnome: { int: 2 },
-      'Half-Elf': { cha: 2 },
+      Elf: { dex: 2, int: 1 },
+      Dwarf: { con: 2, wis: 1 },
+      Halfling: { dex: 2, cha: 1 },
+      Gnome: { int: 2, dex: 1 },
+      'Half-Elf': { cha: 2, dex: 1, con: 1 },
       'Half-Orc': { str: 2, con: 1 },
       Tiefling: { cha: 2, int: 1 },
       Dragonborn: { str: 2, cha: 1 },
+      // Exotic PC Races
+      Aarakocra: { dex: 2, wis: 1 },
+      Firbolg: { wis: 2, str: 1 },
+      Genasi: { con: 2 }, // Varies by type, using generic
+      Goliath: { str: 2, con: 1 },
+      Kenku: { dex: 2, wis: 1 },
+      Tabaxi: { dex: 2, cha: 1 },
+      Triton: { str: 1, con: 1, cha: 1 },
+      Tortle: { str: 2, wis: 1 },
+      'Yuan-ti Pureblood': { cha: 2, int: 1 },
+      // Monstrous Humanoids (Small/Medium)
       Goblin: { dex: 2, con: 1 },
-      Orc: { str: 2, con: 1, int: -2 },
-      Kobold: { dex: 2, str: -2 }
+      Hobgoblin: { con: 2, int: 1 },
+      Bugbear: { str: 2, dex: 1 },
+      Orc: { str: 2, con: 1, int: -1 },
+      Kobold: { dex: 2, str: -2 },
+      Gnoll: { str: 2, con: 1 },
+      Lizardfolk: { con: 2, wis: 1 },
+      Bullywug: { str: 1, dex: 1 },
+      Grung: { dex: 2, con: 1 },
+      Troglodyte: { str: 1, con: 2, int: -2 },
+      // Large Humanoids
+      Ogre: { str: 4, con: 2, int: -2, cha: -1 },
+      Troll: { str: 3, con: 3, int: -2, wis: -1 },
+      Minotaur: { str: 2, con: 1 },
+      Centaur: { str: 2, wis: 1 },
+      // Fey Humanoids
+      Satyr: { cha: 2, dex: 1 },
+      Changeling: { cha: 2, dex: 1 }
     };
 
-    const mods = speciesModifiers[species] || {};
+    // Role-based ability priorities (primary stats get +2-4, secondary +1-2)
+    const roleModifiers: Record<string, Partial<NPC['abilities']>> = {
+      // Martial Classes - STR/DEX focused
+      Fighter: { str: 3, con: 2, dex: 1 },
+      Barbarian: { str: 4, con: 3, dex: 1 },
+      Paladin: { str: 3, cha: 2, con: 1 },
+      Ranger: { dex: 3, wis: 2, con: 1 },
+      Monk: { dex: 3, wis: 2, str: 1 },
+
+      // Dexterity-based
+      Rogue: { dex: 4, int: 2, cha: 1 },
+
+      // Spellcasters - Mental stats
+      Wizard: { int: 4, con: 1, dex: 1 },
+      Sorcerer: { cha: 4, con: 2, dex: 1 },
+      Warlock: { cha: 4, con: 2, dex: 1 },
+      Bard: { cha: 4, dex: 2, con: 1 },
+      Cleric: { wis: 4, con: 2, str: 1 },
+      Druid: { wis: 4, con: 2, int: 1 },
+
+      // Non-adventurer roles - varied stats
+      Noble: { cha: 3, int: 2, wis: 1 },
+      Merchant: { cha: 3, int: 2, wis: 1 },
+      Guard: { str: 2, con: 2, dex: 1 },
+      Priest: { wis: 3, cha: 2, con: 1 },
+      Scholar: { int: 4, wis: 2 },
+      Thief: { dex: 4, cha: 1, int: 1 },
+      Blacksmith: { str: 3, con: 3 },
+      Innkeeper: { cha: 2, wis: 2, con: 1 },
+      Healer: { wis: 3, int: 2, cha: 1 },
+      Entertainer: { cha: 4, dex: 2 },
+      Sailor: { str: 2, dex: 2, con: 2 },
+      Explorer: { con: 2, wis: 2, dex: 2 },
+
+      // Add defaults for other roles
+      Spy: { dex: 3, cha: 2, int: 2 },
+      Assassin: { dex: 4, int: 2 },
+      'Bounty Hunter': { str: 2, dex: 2, wis: 2 },
+      Smuggler: { dex: 3, cha: 2, int: 1 },
+      Pirate: { str: 2, dex: 2, con: 2 },
+      Bandit: { dex: 3, str: 2 },
+      Mercenary: { str: 3, con: 2 },
+      Guildmaster: { cha: 3, int: 2, wis: 2 },
+      Diplomat: { cha: 4, wis: 2, int: 1 },
+      Alchemist: { int: 4, dex: 2 },
+      'Fortune Teller': { wis: 3, cha: 3 },
+      Cultist: { cha: 2, wis: 2, int: 1 },
+      Witch: { int: 3, wis: 3 },
+      Hermit: { wis: 4, con: 2 }
+    };
+
+    const speciesMods = speciesModifiers[species] || {};
+    const roleMods = roleModifiers[role] || { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 };
+
+    // Random variance for each ability
     const rand = () => Math.floor(Math.random() * variance * 2) - variance;
 
     return {
-      str: Math.max(1, base + rand() + (mods.str || 0)),
-      dex: Math.max(1, base + rand() + (mods.dex || 0)),
-      con: Math.max(1, base + rand() + (mods.con || 0)),
-      int: Math.max(1, base + rand() + (mods.int || 0)),
-      wis: Math.max(1, base + rand() + (mods.wis || 0)),
-      cha: Math.max(1, base + rand() + (mods.cha || 0))
+      str: Math.max(1, base + rand() + (speciesMods.str || 0) + (roleMods.str || 0)),
+      dex: Math.max(1, base + rand() + (speciesMods.dex || 0) + (roleMods.dex || 0)),
+      con: Math.max(1, base + rand() + (speciesMods.con || 0) + (roleMods.con || 0)),
+      int: Math.max(1, base + rand() + (speciesMods.int || 0) + (roleMods.int || 0)),
+      wis: Math.max(1, base + rand() + (speciesMods.wis || 0) + (roleMods.wis || 0)),
+      cha: Math.max(1, base + rand() + (speciesMods.cha || 0) + (roleMods.cha || 0))
     };
   }
 
@@ -286,8 +653,8 @@ export class NPCGenerator {
   static generateNPC(data: Partial<NPC>): NPC {
     const species = data.species || NPCGenerator.SPECIES[0];
     const cr = data.challengeRating || NPCGenerator.CHALLENGE_RATINGS[0];
-    const classType = data.class || NPCGenerator.CLASSES[0];
-    const abilities = this.generateAbilities(cr, species);
+    const classType = data.class || NPCGenerator.ROLES[0];
+    const abilities = this.generateAbilities(cr, species, classType);
     const stats = getCRStats(cr);
 
     // HP is directly from DMG chart, with small CON modifier adjustment
@@ -318,7 +685,9 @@ export class NPCGenerator {
       skills,
       saves,
       languages,
-      currency
+      currency,
+      portrait: data.portrait || undefined,
+      token: data.token || undefined
     };
   }
 }

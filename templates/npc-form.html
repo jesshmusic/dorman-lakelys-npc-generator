@@ -1,46 +1,32 @@
 <div class="npc-generator-form">
-    <div class="form-group">
-        <label for="npc-destination">Destination</label>
-        <select id="npc-destination" name="destination">
-            <option value="world">Create as World Actor</option>
-            <option value="new-compendium">Create New Compendium</option>
-            {{#if compendiums.length}}
-            <optgroup label="Existing Compendiums">
-                {{#each compendiums}}
-                <option value="compendium:{{this.id}}">{{this.title}}</option>
-                {{/each}}
-            </optgroup>
-            {{/if}}
-        </select>
+    <!-- Instructions -->
+    <div class="instructions">
+        <p><strong>Quick NPC Generator:</strong> Fill in the basic details below and {{#if aiEnabled}}use AI to{{else}}manually{{/if}} create your NPC</p>
     </div>
 
-    <div class="form-group" id="new-compendium-name-group" style="display: none;">
-        <label for="new-compendium-name">Compendium Name <span class="required">*</span></label>
-        <input type="text" id="new-compendium-name" name="newCompendiumName" placeholder="Enter compendium name" />
-    </div>
-
+    <!-- Folder Selection -->
     <div class="form-group" id="folder-select-group">
-        <label for="npc-folder">Folder</label>
+        <label for="npc-folder">Folder (Optional)</label>
         <select id="npc-folder" name="folder">
-            <option value="">None (Root)</option>
-            {{#if folders.length}}
-                {{#each folders}}
-                <option value="{{this.id}}">{{this.name}}</option>
-                {{/each}}
-            {{/if}}
+            <option value="">-- No Folder --</option>
+            {{#each folders}}
+            <option value="{{this.id}}">{{this.name}}</option>
+            {{/each}}
         </select>
     </div>
 
+    <!-- Flavor -->
     <div class="form-group">
-        <label for="npc-name">Name <span class="required">*</span></label>
-        <input type="text" id="npc-name" name="name" placeholder="Enter NPC name" required />
+        <label for="npc-flavor">Campaign Flavor</label>
+        <select id="npc-flavor" name="flavor">
+            <option value="">-- Select Flavor (Optional) --</option>
+            {{#each flavors}}
+            <option value="{{this}}">{{this}}</option>
+            {{/each}}
+        </select>
     </div>
 
-    <div class="form-group">
-        <label for="npc-description">Description <span class="required">*</span></label>
-        <textarea id="npc-description" name="description" rows="4" placeholder="Enter NPC description" required></textarea>
-    </div>
-
+    <!-- Species -->
     <div class="form-group">
         <label for="npc-species">Species</label>
         <select id="npc-species" name="species">
@@ -50,6 +36,41 @@
         </select>
     </div>
 
+    <!-- Gender -->
+    <div class="form-group">
+        <label for="npc-gender">Gender</label>
+        <select id="npc-gender" name="gender">
+            <option value="">-- Select Gender (Optional) --</option>
+            {{#each genders}}
+            <option value="{{this}}">{{this}}</option>
+            {{/each}}
+        </select>
+    </div>
+
+    <!-- Role -->
+    <div class="form-group">
+        <label for="npc-role">Role</label>
+        <select id="npc-role" name="role">
+            {{#each roles}}
+            <option value="{{this}}">{{this}}</option>
+            {{/each}}
+        </select>
+    </div>
+
+    <!-- Name -->
+    <div class="form-group">
+        <label for="npc-name">Name <span class="required">*</span></label>
+        <div class="input-with-ai">
+            <input type="text" id="npc-name" name="name" placeholder="Enter NPC name" required />
+            {{#if aiEnabled}}
+            <button type="button" class="ai-assist-btn" data-ai-action="generateName" title="Generate Name">
+                <i class="fas fa-wand-magic-sparkles"></i>
+            </button>
+            {{/if}}
+        </div>
+    </div>
+
+    <!-- Alignment -->
     <div class="form-group">
         <label for="npc-alignment">Alignment</label>
         <select id="npc-alignment" name="alignment">
@@ -59,22 +80,77 @@
         </select>
     </div>
 
+    <!-- CR Slider -->
     <div class="form-group">
-        <label for="npc-cr">Challenge Rating</label>
-        <select id="npc-cr" name="challengeRating">
-            {{#each challengeRatings}}
-            <option value="{{this}}">{{this}}</option>
-            {{/each}}
-        </select>
+        <label for="npc-cr">Challenge Rating: <span id="cr-value">1</span></label>
+        <input type="range" id="npc-cr" name="challengeRating" min="0" max="30" value="5" step="1" />
     </div>
 
+    <!-- Personality -->
     <div class="form-group">
-        <label for="npc-class">Class</label>
-        <select id="npc-class" name="class">
-            {{#each classes}}
-            <option value="{{this}}">{{this}}</option>
-            {{/each}}
-        </select>
+        <label>Personality Traits</label>
+        <input type="hidden" id="npc-personality" name="personality" value="" />
+        <div class="multiple-dropdown-select">
+            <div class="multiple-dropdown flexrow">
+                <div class="multiple-dropdown-content" id="personality-selected">
+                    <!-- Selected traits appear here as pills -->
+                </div>
+                <i class="fas fa-chevron-down"></i>
+            </div>
+            <ul class="dropdown-list">
+                {{#each personalities}}
+                <li class="multiple-dropdown-item" data-value="{{this}}">
+                    {{this}}
+                </li>
+                {{/each}}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Biography -->
+    <div class="form-group">
+        <label for="npc-biography">Biography</label>
+        <div class="input-with-ai">
+            <textarea id="npc-biography" name="biography" rows="6" placeholder="Enter NPC biography"></textarea>
+            {{#if aiEnabled}}
+            <button type="button" class="ai-assist-btn" data-ai-action="generateBio" title="Generate Biography">
+                <i class="fas fa-wand-magic-sparkles"></i>
+            </button>
+            {{/if}}
+        </div>
+    </div>
+
+    <!-- Portrait -->
+    <div class="form-group">
+        <label for="npc-portrait">Portrait (Optional)</label>
+        <div class="file-input-group">
+            <input type="text" id="npc-portrait" name="portrait" placeholder="Path to portrait image" />
+            {{#if aiEnabled}}
+            <button type="button" class="ai-assist-btn" data-ai-action="generatePortrait" title="Generate Portrait ($0.04)">
+                <i class="fas fa-wand-magic-sparkles"></i>
+            </button>
+            {{/if}}
+            <button type="button" class="file-picker" data-type="image" data-target="portrait">
+                <i class="fas fa-file-import"></i> Browse
+            </button>
+        </div>
+        <div class="image-preview" data-preview="portrait">
+            <img src="" alt="Portrait Preview" style="display: none; max-width: 100px; max-height: 100px; margin-top: 5px;" />
+        </div>
+    </div>
+
+    <!-- Token -->
+    <div class="form-group">
+        <label for="npc-token">Token (Optional)</label>
+        <div class="file-input-group">
+            <input type="text" id="npc-token" name="token" placeholder="Path to token image" />
+            <button type="button" class="file-picker" data-type="image" data-target="token">
+                <i class="fas fa-file-import"></i> Browse
+            </button>
+        </div>
+        <div class="image-preview" data-preview="token">
+            <img src="" alt="Token Preview" style="display: none; max-width: 100px; max-height: 100px; margin-top: 5px;" />
+        </div>
     </div>
 
     <footer class="form-footer flexrow">

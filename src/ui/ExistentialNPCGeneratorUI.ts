@@ -1,9 +1,10 @@
 // UI components for the NPC Generator
 import { NPCGenerator, NPC } from '../generator/ExistentialNPCGenerator.js';
-import { parseCR, crToLevel } from '../utils/crCalculations.js';
-import { getEquipmentForClass } from '../utils/equipmentData.js';
-import { CLASS_FEATURES, SPELLCASTING_CLASSES } from '../utils/classData.js';
-import { getSpellsForClass } from '../utils/spellData.js';
+import { AIService, AIGenerationRequest } from '../services/AIService.js';
+import { PortraitConfirmationDialog } from './PortraitConfirmationDialog.js';
+import { parseCR } from '../utils/crCalculations.js';
+
+const MODULE_ID = 'dorman-lakelys-npc-generator';
 
 // Foundry V2 Application Dialog
 class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationMixin(
@@ -11,15 +12,16 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
 ) {
   static DEFAULT_OPTIONS = {
     id: 'npc-generator-dialog',
-    classes: ['dnd5e2', 'sheet', 'npc-generator'],
+    classes: ['npc-generator', 'em-puzzles'],
     tag: 'form',
     window: {
+      contentClasses: ['standard-form'],
       title: 'NPC Generator',
       icon: 'fas fa-user-plus',
       resizable: true
     },
     position: {
-      width: 520,
+      width: 600,
       height: 'auto' as const
     },
     actions: {
@@ -35,16 +37,6 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
   };
 
   async _prepareContext(_options: any): Promise<any> {
-    // Get all actor compendiums available to the user (exclude locked/read-only)
-    const compendiums = game.packs
-      ? Array.from(game.packs.values())
-          .filter((pack: any) => pack.documentName === 'Actor' && !pack.locked)
-          .map((pack: any) => ({
-            id: pack.collection,
-            title: pack.title
-          }))
-      : [];
-
     // Get all actor folders
     const folders = Array.from(game.folders?.values() || [])
       .filter((folder: any) => folder.type === 'Actor')
@@ -53,46 +45,365 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
         name: folder.name
       }));
 
+    // Check if AI is enabled
+    const aiEnabled = ((game.settings as any)?.get(MODULE_ID, 'enableAI') as boolean) || false;
+
     return {
       species: NPCGenerator.SPECIES,
+      flavors: NPCGenerator.FLAVORS,
+      genders: NPCGenerator.GENDERS,
+      roles: NPCGenerator.ROLES,
       alignments: NPCGenerator.ALIGNMENTS,
-      challengeRatings: NPCGenerator.CHALLENGE_RATINGS,
-      classes: NPCGenerator.CLASSES,
-      compendiums,
-      folders
+      personalities: NPCGenerator.PERSONALITIES,
+      folders,
+      aiEnabled
     };
   }
 
   _onRender(context: any, options: any): void {
     super._onRender(context, options);
 
-    // Set up destination select change handler
-    const destinationSelect = this.element.querySelector('#npc-destination') as HTMLSelectElement;
-    const newCompendiumGroup = this.element.querySelector(
-      '#new-compendium-name-group'
-    ) as HTMLElement;
-    const newCompendiumInput = this.element.querySelector(
-      '#new-compendium-name'
-    ) as HTMLInputElement;
-    const folderSelectGroup = this.element.querySelector('#folder-select-group') as HTMLElement;
+    // Set up AI generation buttons
+    const aiButtons = this.element.querySelectorAll('[data-ai-action]');
+    aiButtons.forEach((button: Element) => {
+      (button as HTMLElement).onclick = this._onAIGenerate.bind(this);
+    });
 
-    if (destinationSelect && newCompendiumGroup && folderSelectGroup) {
-      destinationSelect.addEventListener('change', () => {
-        if (destinationSelect.value === 'new-compendium') {
-          newCompendiumGroup.style.display = 'block';
-          newCompendiumInput.required = true;
-          folderSelectGroup.style.display = 'none';
-        } else if (destinationSelect.value === 'world') {
-          newCompendiumGroup.style.display = 'none';
-          newCompendiumInput.required = false;
-          folderSelectGroup.style.display = 'block';
-        } else {
-          // Compendium destination
-          newCompendiumGroup.style.display = 'none';
-          newCompendiumInput.required = false;
-          folderSelectGroup.style.display = 'none';
-        }
+    // Set up CR slider value display
+    const crSlider = this.element.querySelector('#npc-cr') as HTMLInputElement;
+    const crValueDisplay = this.element.querySelector('#cr-value') as HTMLElement;
+    if (crSlider && crValueDisplay) {
+      crSlider.addEventListener('input', () => {
+        const crIndex = parseInt(crSlider.value);
+        const crValue = NPCGenerator.CHALLENGE_RATINGS[crIndex];
+        crValueDisplay.textContent = crValue;
       });
+    }
+
+    // Set up file picker buttons
+    const filePickerButtons = this.element.querySelectorAll('.file-picker');
+    filePickerButtons.forEach((button: Element) => {
+      (button as HTMLElement).onclick = this._onFilePicker.bind(this);
+    });
+
+    // Set up image preview updates
+    const portraitInput = this.element.querySelector('#npc-portrait') as HTMLInputElement;
+    const tokenInput = this.element.querySelector('#npc-token') as HTMLInputElement;
+
+    if (portraitInput) {
+      portraitInput.addEventListener('input', () => this._updateImagePreview('portrait'));
+    }
+    if (tokenInput) {
+      tokenInput.addEventListener('input', () => this._updateImagePreview('token'));
+    }
+
+    // Set up personality multi-select dropdown
+    this._setupPersonalityDropdown();
+  }
+
+  /**
+   * Set up personality multi-select dropdown
+   */
+  private _setupPersonalityDropdown(): void {
+    const dropdownSelect = this.element.querySelector('.multiple-dropdown-select');
+    const dropdownToggle = this.element.querySelector('.multiple-dropdown');
+    const dropdownList = this.element.querySelector('.dropdown-list');
+    const personalityInput = this.element.querySelector('#npc-personality') as HTMLInputElement;
+    const contentArea = this.element.querySelector('#personality-selected') as HTMLElement;
+
+    if (!dropdownSelect || !dropdownToggle || !dropdownList || !personalityInput) return;
+
+    // Toggle dropdown on click
+    (dropdownToggle as HTMLElement).onclick = (event: Event) => {
+      event.stopPropagation();
+      dropdownList.classList.toggle('open');
+    };
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (event: Event) => {
+      if (!dropdownSelect.contains(event.target as Node)) {
+        dropdownList.classList.remove('open');
+      }
+    });
+
+    // Handle item selection
+    const items = dropdownList.querySelectorAll('.multiple-dropdown-item');
+    items.forEach((item: Element) => {
+      (item as HTMLElement).onclick = (event: Event) => {
+        event.stopPropagation();
+        const value = (item as HTMLElement).dataset.value;
+        if (!value) return;
+
+        const currentValues = personalityInput.value
+          .split(',')
+          .map(v => v.trim())
+          .filter(v => v);
+
+        if (currentValues.includes(value)) {
+          // Remove trait
+          const newValues = currentValues.filter(v => v !== value);
+          personalityInput.value = newValues.join(', ');
+          item.classList.remove('selected');
+          this._removePersonalityPill(value);
+        } else {
+          // Add trait
+          currentValues.push(value);
+          personalityInput.value = currentValues.join(', ');
+          item.classList.add('selected');
+          this._addPersonalityPill(value);
+        }
+
+        dropdownList.classList.remove('open');
+      };
+    });
+  }
+
+  /**
+   * Add a personality pill to the display
+   */
+  private _addPersonalityPill(value: string): void {
+    const contentArea = this.element.querySelector('#personality-selected') as HTMLElement;
+    if (!contentArea) return;
+
+    const pill = document.createElement('div');
+    pill.className = 'multiple-dropdown-option flexrow';
+    pill.dataset.value = value;
+
+    const span = document.createElement('span');
+    span.textContent = value;
+    pill.appendChild(span);
+
+    const removeBtn = document.createElement('div');
+    removeBtn.className = 'remove-option';
+    removeBtn.innerHTML = '&times;';
+    removeBtn.onclick = (event: Event) => {
+      event.stopPropagation();
+      this._removePersonalityTrait(value);
+    };
+    pill.appendChild(removeBtn);
+
+    contentArea.appendChild(pill);
+  }
+
+  /**
+   * Remove a personality pill from the display
+   */
+  private _removePersonalityPill(value: string): void {
+    const pill = this.element.querySelector(`.multiple-dropdown-option[data-value="${value}"]`);
+    if (pill) pill.remove();
+  }
+
+  /**
+   * Remove a personality trait (from pill remove button)
+   */
+  private _removePersonalityTrait(value: string): void {
+    const personalityInput = this.element.querySelector('#npc-personality') as HTMLInputElement;
+    if (!personalityInput) return;
+
+    const currentValues = personalityInput.value
+      .split(',')
+      .map(v => v.trim())
+      .filter(v => v && v !== value);
+
+    personalityInput.value = currentValues.join(', ');
+
+    // Remove pill from display
+    this._removePersonalityPill(value);
+
+    // Remove selected state from dropdown item
+    const item = this.element.querySelector(`.multiple-dropdown-item[data-value="${value}"]`);
+    if (item) item.classList.remove('selected');
+  }
+
+  /**
+   * Handle file picker button clicks
+   */
+  async _onFilePicker(event: Event): Promise<void> {
+    event.preventDefault();
+    const button = event.currentTarget as HTMLElement;
+    const target = button.dataset.target;
+    const type = button.dataset.type;
+
+    if (!target) return;
+
+    const input = this.element.querySelector(`#npc-${target}`) as HTMLInputElement;
+    if (!input) return;
+
+    const fp = new (FilePicker as any)({
+      type: type,
+      current: input.value,
+      callback: (path: string) => {
+        input.value = path;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
+    return fp.browse();
+  }
+
+  /**
+   * Update image preview
+   */
+  _updateImagePreview(type: 'portrait' | 'token'): void {
+    const input = this.element.querySelector(`#npc-${type}`) as HTMLInputElement;
+    const preview = this.element.querySelector(`[data-preview="${type}"] img`) as HTMLImageElement;
+
+    if (!input || !preview) return;
+
+    if (input.value) {
+      preview.src = input.value;
+      preview.style.display = 'block';
+    } else {
+      preview.style.display = 'none';
+    }
+  }
+
+  /**
+   * Handle AI generation button clicks
+   */
+  async _onAIGenerate(event: Event): Promise<void> {
+    event.preventDefault();
+    const button = event.currentTarget as HTMLElement;
+    const action = button.dataset.aiAction;
+
+    if (!action) return;
+
+    // Gather context from form
+    const context = this._getFormContext();
+
+    // Show loading state
+    button.classList.add('loading');
+    const originalHTML = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    try {
+      switch (action) {
+        case 'generateName':
+          await this._generateNames(context);
+          break;
+        case 'generateBio':
+          await this._generateBiography(context);
+          break;
+        case 'generatePortrait':
+          await this._generatePortrait(context);
+          break;
+      }
+    } catch (error: any) {
+      console.error("Dorman Lakely's NPC Gen | AI Generation Error:", error);
+      ui.notifications?.error(`AI generation failed: ${error.message}`);
+    } finally {
+      // Restore button state
+      button.classList.remove('loading');
+      button.innerHTML = originalHTML;
+    }
+  }
+
+  /**
+   * Get current form context for AI generation
+   */
+  _getFormContext(): any {
+    const flavorSelect = this.element.querySelector('#npc-flavor') as HTMLSelectElement;
+    const speciesSelect = this.element.querySelector('#npc-species') as HTMLSelectElement;
+    const nameInput = this.element.querySelector('#npc-name') as HTMLInputElement;
+    const genderSelect = this.element.querySelector('#npc-gender') as HTMLSelectElement;
+    const roleSelect = this.element.querySelector('#npc-role') as HTMLSelectElement;
+    const alignmentSelect = this.element.querySelector('#npc-alignment') as HTMLSelectElement;
+    const crSlider = this.element.querySelector('#npc-cr') as HTMLInputElement;
+    const crIndex = parseInt(crSlider?.value || '5');
+    const challengeRating = NPCGenerator.CHALLENGE_RATINGS[crIndex];
+    const personalitySelect = this.element.querySelector('#npc-personality') as HTMLSelectElement;
+    const idealSelect = this.element.querySelector('#npc-ideal') as HTMLSelectElement;
+    const bondSelect = this.element.querySelector('#npc-bond') as HTMLSelectElement;
+    const biographyTextarea = this.element.querySelector('#npc-biography') as HTMLTextAreaElement;
+
+    return {
+      flavor: flavorSelect?.value,
+      species: speciesSelect?.value,
+      name: nameInput?.value,
+      gender: genderSelect?.value,
+      role: roleSelect?.value,
+      alignment: alignmentSelect?.value,
+      challengeRating,
+      personality: personalitySelect?.value,
+      ideal: idealSelect?.value,
+      bond: bondSelect?.value,
+      biography: biographyTextarea?.value
+    };
+  }
+
+  /**
+   * Generate name suggestions
+   */
+  async _generateNames(context: any): Promise<void> {
+    const request: AIGenerationRequest = {
+      type: 'name',
+      context
+    };
+
+    const response = await AIService.generate(request);
+
+    if (!response.success) {
+      ui.notifications?.error(`Failed to generate name: ${response.error}`);
+      return;
+    }
+
+    // Use the first generated name directly
+    const names = response.content as string[];
+    if (names && names.length > 0) {
+      const nameInput = this.element.querySelector('#npc-name') as HTMLInputElement;
+      if (nameInput) {
+        nameInput.value = names[0];
+        ui.notifications?.info(`Generated name: ${names[0]}`);
+      }
+    }
+  }
+
+  /**
+   * Generate biography
+   */
+  async _generateBiography(context: any): Promise<void> {
+    const request: AIGenerationRequest = {
+      type: 'biography',
+      context
+    };
+
+    const response = await AIService.generate(request);
+
+    if (!response.success) {
+      ui.notifications?.error(`Failed to generate biography: ${response.error}`);
+      return;
+    }
+
+    // Use the generated biography directly
+    const biography = response.content as string;
+    if (biography) {
+      const biographyTextarea = this.element.querySelector('#npc-biography') as HTMLTextAreaElement;
+      if (biographyTextarea) {
+        biographyTextarea.value = biography;
+        ui.notifications?.info('Biography generated successfully');
+      }
+    }
+  }
+
+  /**
+   * Generate portrait using DALL-E
+   */
+  async _generatePortrait(context: any): Promise<void> {
+    // Show confirmation dialog which handles the entire generation flow
+    const result = await PortraitConfirmationDialog.show(context);
+
+    // User cancelled or generation failed
+    if (!result.success) {
+      return;
+    }
+
+    // Success! Update the portrait field
+    if (result.portraitPath) {
+      const portraitInput = this.element.querySelector('#npc-portrait') as HTMLInputElement;
+      if (portraitInput) {
+        portraitInput.value = result.portraitPath;
+        // Trigger preview update
+        this._updateImagePreview('portrait');
+      }
     }
   }
 
@@ -101,41 +412,43 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
     if (!form) return;
 
     const formData = new FormData(form);
-    const inputData = {
-      name: formData.get('name') as string,
-      description: formData.get('description') as string,
-      species: formData.get('species') as string,
-      alignment: formData.get('alignment') as string,
-      challengeRating: formData.get('challengeRating') as string,
-      class: formData.get('class') as string
-    };
-
-    const destination = formData.get('destination') as string;
-    const newCompendiumName = formData.get('newCompendiumName') as string;
+    const name = formData.get('name') as string;
+    const biography = formData.get('biography') as string;
+    const role = formData.get('role') as string;
+    const alignment = formData.get('alignment') as string;
+    const crSlider = form.querySelector('#npc-cr') as HTMLInputElement;
+    const crIndex = parseInt(crSlider?.value || '5');
+    const challengeRating = NPCGenerator.CHALLENGE_RATINGS[crIndex];
+    const personality = formData.get('personality') as string;
+    const ideal = formData.get('ideal') as string;
+    const bond = formData.get('bond') as string;
+    const portrait = formData.get('portrait') as string;
+    const token = formData.get('token') as string;
     const folderId = formData.get('folder') as string;
 
-    if (!inputData.name || !inputData.description) {
-      ui.notifications?.warn('Please fill in all required fields');
+    // Validate required fields
+    if (!name) {
+      ui.notifications?.warn('Please enter a name');
       return;
     }
 
-    if (destination === 'new-compendium' && !newCompendiumName) {
-      ui.notifications?.warn('Please enter a compendium name');
-      return;
-    }
+    // Create NPC data
+    const inputData = {
+      name,
+      description: biography || '',
+      alignment,
+      challengeRating,
+      class: role,
+      species: 'humanoid', // Default to humanoid for simple NPCs
+      portrait: portrait || undefined,
+      token: token || undefined
+    };
 
-    // Generate full NPC with stats
+    // Generate NPC with CR-appropriate stats
     const npc = NPCGenerator.generateNPC(inputData);
 
-    // Handle different destinations
-    if (destination === 'world') {
-      await NPCGeneratorUI.createActor(npc, folderId || null);
-    } else if (destination === 'new-compendium') {
-      await NPCGeneratorUI.createActorInNewCompendium(npc, newCompendiumName);
-    } else if (destination.startsWith('compendium:')) {
-      const compendiumId = destination.replace('compendium:', '');
-      await NPCGeneratorUI.createActorInCompendium(npc, compendiumId);
-    }
+    // Create actor in world with personality traits
+    await NPCGeneratorUI.createSimpleActor(npc, personality, ideal, bond, folderId || null);
 
     // @ts-expect-error - close() exists at runtime but not in types
     this.close();
@@ -151,6 +464,9 @@ export class NPCGeneratorUI {
   private static generator = new NPCGenerator();
 
   static addGeneratorButton(): void {
+    // Only show button to GM users
+    if (!game.user?.isGM) return;
+
     // Add button to the actors directory header
     const actorsTab = document.querySelector('#actors');
     if (!actorsTab) return;
@@ -162,7 +478,7 @@ export class NPCGeneratorUI {
     if (header.querySelector('.npc-generator-btn')) return;
 
     const button = document.createElement('button');
-    button.innerHTML = '<i class="fas fa-user-plus"></i> Generate NPC';
+    button.innerHTML = '<i class="fas fa-user-plus"></i> Dorman\'s NPC Gen';
     button.className = 'npc-generator-btn';
     button.onclick = () => this.showGeneratorDialog();
 
@@ -179,164 +495,16 @@ export class NPCGeneratorUI {
     new NPCGeneratorDialog().render(true);
   }
 
-  static async createActor(npc: NPC, folderId: string | null = null): Promise<void> {
-    try {
-      // Build skills object
-      const skills: any = {};
-      npc.skills.forEach(skill => {
-        skills[skill] = { value: 1, ability: this.getSkillAbility(skill) };
-      });
-
-      // Build saves object
-      const saves: any = {
-        str: { proficient: npc.saves.includes('str') ? 1 : 0 },
-        dex: { proficient: npc.saves.includes('dex') ? 1 : 0 },
-        con: { proficient: npc.saves.includes('con') ? 1 : 0 },
-        int: { proficient: npc.saves.includes('int') ? 1 : 0 },
-        wis: { proficient: npc.saves.includes('wis') ? 1 : 0 },
-        cha: { proficient: npc.saves.includes('cha') ? 1 : 0 }
-      };
-
-      const actorData: any = {
-        name: npc.name,
-        type: 'npc',
-        folder: folderId,
-        system: {
-          abilities: {
-            str: { value: npc.abilities.str, proficient: saves.str.proficient },
-            dex: { value: npc.abilities.dex, proficient: saves.dex.proficient },
-            con: { value: npc.abilities.con, proficient: saves.con.proficient },
-            int: { value: npc.abilities.int, proficient: saves.int.proficient },
-            wis: { value: npc.abilities.wis, proficient: saves.wis.proficient },
-            cha: { value: npc.abilities.cha, proficient: saves.cha.proficient }
-          },
-          attributes: {
-            hp: {
-              value: npc.hp,
-              max: npc.hp
-            },
-            ac: {
-              calc: 'default' // Use equipped armor
-            },
-            movement: {
-              walk: npc.speed.walk,
-              fly: npc.speed.fly || 0,
-              climb: npc.speed.climb || 0,
-              swim: npc.speed.swim || 0,
-              units: 'ft'
-            }
-          },
-          details: {
-            cr: npc.challengeRating,
-            type: {
-              value: npc.species.toLowerCase()
-            },
-            alignment: npc.alignment.toLowerCase().replace(' ', ''),
-            biography: {
-              value: this.formatBiography(npc)
-            }
-          },
-          skills,
-          traits: {
-            languages: {
-              value: new Set(npc.languages),
-              custom: ''
-            }
-          },
-          currency: npc.currency
-        },
-        prototypeToken: {
-          name: npc.name
-        }
-      };
-
-      const actor = await Actor.create(actorData);
-
-      if (actor) {
-        // Add equipment, features, class features, and spells from compendiums
-        await this.addEquipment(actor, npc);
-        await this.addFeatures(actor, npc);
-        await this.addClassFeatures(actor, npc);
-        await this.addSpells(actor, npc);
-
-        ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating})`);
-
-        // Open the actor sheet
-        actor.sheet?.render(true);
-      }
-    } catch (error) {
-      console.error('Error creating NPC:', error);
-      ui.notifications?.error('Failed to create NPC');
-    }
-  }
-
-  static async createActorInNewCompendium(npc: NPC, compendiumName: string): Promise<void> {
-    try {
-      // Create a new compendium
-      const compendium = await CompendiumCollection.createCompendium({
-        label: compendiumName,
-        type: 'Actor',
-        name: compendiumName.toLowerCase().replace(/\s+/g, '-')
-      } as any);
-
-      ui.notifications?.info(`Created compendium: ${compendiumName}`);
-
-      // Create the actor in the new compendium
-      await this.createActorInCompendium(npc, compendium.collection);
-    } catch (error) {
-      console.error('Error creating compendium:', error);
-      ui.notifications?.error('Failed to create compendium');
-    }
-  }
-
-  static async createActorInCompendium(npc: NPC, compendiumId: string): Promise<void> {
-    try {
-      if (!game.packs) {
-        ui.notifications?.error('Game packs not available');
-        return;
-      }
-      const pack = game.packs.get(compendiumId);
-      if (!pack) {
-        ui.notifications?.error(`Compendium ${compendiumId} not found`);
-        return;
-      }
-
-      // Create the actor in the world first (with all items)
-      // This uses the existing working code
-      const actor = await this.createActorWithItems(npc);
-
-      if (!actor) {
-        ui.notifications?.error('Failed to create NPC');
-        return;
-      }
-
-      // Import the completed actor into the compendium
-      const compendiumActor = await pack.importDocument(actor);
-
-      if (compendiumActor) {
-        ui.notifications?.info(
-          `Created NPC: ${npc.name} (CR ${npc.challengeRating}) in ${pack.title}`
-        );
-
-        // Delete the temporary world actor
-        await actor.delete();
-
-        // Import back to world and open sheet for viewing/editing
-        const worldActor = await game.actors?.importFromCompendium(pack as any, compendiumActor.id);
-        if (worldActor) {
-          worldActor.sheet?.render(true);
-        }
-      }
-    } catch (error) {
-      console.error('Error creating NPC in compendium:', error);
-      ui.notifications?.error('Failed to create NPC in compendium');
-    }
-  }
-
-  private static async createActorWithItems(
+  /**
+   * Create a simple actor in world with personality traits
+   */
+  static async createSimpleActor(
     npc: NPC,
+    personality: string,
+    ideal: string,
+    bond: string,
     folderId: string | null = null
-  ): Promise<any> {
+  ): Promise<void> {
     try {
       // Build skills object
       const skills: any = {};
@@ -354,10 +522,16 @@ export class NPCGeneratorUI {
         cha: { proficient: npc.saves.includes('cha') ? 1 : 0 }
       };
 
+      // Format personality traits with HTML list items
+      const personalityHtml = personality ? `<li>${personality}</li>` : '';
+      const idealHtml = ideal ? `<li>${ideal}</li>` : '';
+      const bondHtml = bond ? `<li>${bond}</li>` : '';
+
       const actorData: any = {
         name: npc.name,
         type: 'npc',
         folder: folderId,
+        img: npc.portrait || 'icons/svg/mystery-man.svg',
         system: {
           abilities: {
             str: { value: npc.abilities.str, proficient: saves.str.proficient },
@@ -384,14 +558,18 @@ export class NPCGeneratorUI {
             }
           },
           details: {
-            cr: npc.challengeRating,
+            cr: parseCR(npc.challengeRating),
             type: {
               value: npc.species.toLowerCase()
             },
             alignment: npc.alignment.toLowerCase().replace(' ', ''),
             biography: {
-              value: this.formatBiography(npc)
-            }
+              value: npc.description
+            },
+            // Apply personality traits
+            personality: personalityHtml,
+            ideal: idealHtml,
+            bond: bondHtml
           },
           skills,
           traits: {
@@ -403,203 +581,22 @@ export class NPCGeneratorUI {
           currency: npc.currency
         },
         prototypeToken: {
-          name: npc.name
+          name: npc.name,
+          texture: {
+            src: npc.token || npc.portrait || 'icons/svg/mystery-man.svg'
+          }
         }
       };
 
       const actor = await Actor.create(actorData);
 
       if (actor) {
-        // Add equipment, features, class features, and spells
-        await this.addEquipment(actor, npc);
-        await this.addFeatures(actor, npc);
-        await this.addClassFeatures(actor, npc);
-        await this.addSpells(actor, npc);
-      }
-
-      return actor;
-    } catch (error) {
-      console.error('Error creating actor with items:', error);
-      return null;
-    }
-  }
-
-  private static async addEquipment(actor: any, npc: NPC): Promise<void> {
-    const cr = parseCR(npc.challengeRating);
-    const equipmentPool = getEquipmentForClass(npc.class, cr);
-    const allEquipment = [...equipmentPool.weapons, ...equipmentPool.armor];
-
-    if (allEquipment.length === 0) return;
-
-    try {
-      if (!game.packs) return;
-      const pack = game.packs.get('dnd5e.items');
-      if (!pack) return;
-
-      const items = [];
-      for (const itemName of allEquipment) {
-        const item = pack.index.find((i: any) => i.name === itemName);
-        if (item) {
-          const fullItem = await pack.getDocument(item._id);
-          if (fullItem) items.push(fullItem);
-        }
-      }
-
-      if (items.length > 0) {
-        // Mark all items as equipped
-        const itemData = items.map((i: any) => {
-          const obj = i.toObject();
-          if (obj.system && 'equipped' in obj.system) {
-            obj.system.equipped = true;
-          }
-          return obj;
-        });
-        await actor.createEmbeddedDocuments('Item', itemData);
+        ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating})`);
+        actor.sheet?.render(true);
       }
     } catch (error) {
-      console.warn('Could not add equipment:', error);
-    }
-  }
-
-  private static async addFeatures(actor: any, npc: NPC): Promise<void> {
-    const cr = parseCR(npc.challengeRating);
-
-    // Common monster features by CR range
-    const featureMap: Record<string, string[]> = {
-      low: ['Keen Senses', 'Pack Tactics'],
-      medium: ['Multiattack', 'Keen Senses', 'Magic Resistance'],
-      high: ['Legendary Resistance (3/Day)', 'Magic Resistance', 'Multiattack']
-    };
-
-    let pool: string[];
-    if (cr < 3) pool = featureMap.low;
-    else if (cr < 10) pool = featureMap.medium;
-    else pool = featureMap.high;
-
-    try {
-      if (!game.packs) return;
-      const pack = game.packs.get('dnd5e.monsterfeatures');
-      if (!pack) return;
-
-      const features = [];
-      for (const featureName of pool) {
-        const feature = pack.index.find((f: any) => f.name === featureName);
-        if (feature) {
-          const fullFeature = await pack.getDocument(feature._id);
-          if (fullFeature) features.push(fullFeature);
-        }
-      }
-
-      if (features.length > 0) {
-        await actor.createEmbeddedDocuments(
-          'Item',
-          features.map((f: any) => f.toObject())
-        );
-      }
-    } catch (error) {
-      console.warn('Could not add features:', error);
-    }
-  }
-
-  private static async addClassFeatures(actor: any, npc: NPC): Promise<void> {
-    const level = crToLevel(npc.challengeRating);
-    const classFeatureList = CLASS_FEATURES[npc.class] || {};
-    const featuresToAdd: string[] = [];
-
-    // Add features based on level thresholds
-    for (const [threshold, features] of Object.entries(classFeatureList)) {
-      if (level >= parseInt(threshold)) {
-        featuresToAdd.push(...features);
-      }
-    }
-
-    if (featuresToAdd.length === 0) return;
-
-    try {
-      if (!game.packs) {
-        console.warn('Game packs not available');
-        return;
-      }
-      const pack = game.packs.get('dnd5e.classfeatures');
-      if (!pack) {
-        console.warn('Class features pack not found');
-        return;
-      }
-
-      const features = [];
-      for (const featureName of featuresToAdd) {
-        const feature = pack.index.find((f: any) =>
-          f.name.toLowerCase().includes(featureName.toLowerCase())
-        );
-        if (feature) {
-          const fullFeature = await pack.getDocument(feature._id);
-          if (fullFeature) features.push(fullFeature);
-        }
-      }
-
-      if (features.length > 0) {
-        await actor.createEmbeddedDocuments(
-          'Item',
-          features.map((f: any) => f.toObject())
-        );
-      }
-    } catch (error) {
-      console.warn('Could not add class features:', error);
-    }
-  }
-
-  private static async addSpells(actor: any, npc: NPC): Promise<void> {
-    // Check if class has spellcasting
-    if (!SPELLCASTING_CLASSES.includes(npc.class)) {
-      return;
-    }
-
-    const level = crToLevel(npc.challengeRating);
-    const spellSelection = getSpellsForClass(npc.class, level);
-
-    const allSpells = [
-      ...spellSelection.cantrips,
-      ...spellSelection.level1,
-      ...spellSelection.level2,
-      ...spellSelection.level3,
-      ...spellSelection.level4,
-      ...spellSelection.level5,
-      ...spellSelection.level6,
-      ...spellSelection.level7,
-      ...spellSelection.level8,
-      ...spellSelection.level9
-    ];
-
-    if (allSpells.length === 0) return;
-
-    try {
-      if (!game.packs) {
-        console.warn('Game packs not available');
-        return;
-      }
-      const pack = game.packs.get('dnd5e.spells');
-      if (!pack) {
-        console.warn('Spells pack not found');
-        return;
-      }
-
-      const spells = [];
-      for (const spellName of allSpells) {
-        const spell = pack.index.find((s: any) => s.name === spellName);
-        if (spell) {
-          const fullSpell = await pack.getDocument(spell._id);
-          if (fullSpell) spells.push(fullSpell);
-        }
-      }
-
-      if (spells.length > 0) {
-        await actor.createEmbeddedDocuments(
-          'Item',
-          spells.map((s: any) => s.toObject())
-        );
-      }
-    } catch (error) {
-      console.warn('Could not add spells:', error);
+      console.error("Dorman Lakely's NPC Gen | Error creating NPC:", error);
+      ui.notifications?.error('Failed to create NPC');
     }
   }
 
@@ -625,20 +622,5 @@ export class NPCGeneratorUI {
       sur: 'wis'
     };
     return skillAbilityMap[skillKey] || 'wis';
-  }
-
-  private static formatBiography(npc: NPC): string {
-    return `
-            <h3>Character Profile</h3>
-            <p><strong>Description:</strong> ${npc.description}</p>
-            <p><strong>Species:</strong> ${npc.species}</p>
-            <p><strong>Alignment:</strong> ${npc.alignment}</p>
-            <p><strong>Challenge Rating:</strong> ${npc.challengeRating}</p>
-            <h4>Abilities</h4>
-            <p><strong>STR:</strong> ${npc.abilities.str} | <strong>DEX:</strong> ${npc.abilities.dex} | <strong>CON:</strong> ${npc.abilities.con}</p>
-            <p><strong>INT:</strong> ${npc.abilities.int} | <strong>WIS:</strong> ${npc.abilities.wis} | <strong>CHA:</strong> ${npc.abilities.cha}</p>
-            <h4>Combat Stats</h4>
-            <p><strong>Hit Points:</strong> ${npc.hp} | <strong>Armor Class:</strong> ${npc.ac}</p>
-        `;
   }
 }

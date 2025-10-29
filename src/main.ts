@@ -42,5 +42,5 @@ Hooks.on('renderActorDirectory', async (_app: any, _html: any) => {
 
 // Handle canvas ready for any canvas-specific functionality
 Hooks.once('canvasReady', async () => {
-  console.log(`${MODULE_ID} | Canvas ready`);
+  console.log(`Dorman Lakely's NPC Gen | Canvas ready`);
 });

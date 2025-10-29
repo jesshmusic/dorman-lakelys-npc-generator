@@ -20,6 +20,7 @@ export interface AIGenerationRequest {
     description?: string;
     personality?: string;
     flavor?: string;
+    artStyle?: string; // Optional art style override for portrait generation
   };
 }
 
@@ -81,57 +82,101 @@ Provide ONLY the name, nothing else. No explanation, numbering, or extra text. J
     const personalityInfo = context.personality ? `\n- Personality: ${context.personality}` : '';
     const idealInfo = context.ideal ? `\n- Ideal: ${context.ideal}` : '';
     const bondInfo = context.bond ? `\n- Bond: ${context.bond}` : '';
+    const genderInfo = context.gender ? `\n- Gender: ${context.gender}` : '';
 
     return `Create a brief biography for a D&D 5e NPC with these characteristics:
 ${context.name ? `- Name: ${context.name}` : ''}
 - Role: ${context.role || 'Fighter'}
 - Alignment: ${context.alignment || 'Neutral'}
-- Challenge Rating: ${context.challengeRating || '1'}${flavorInfo}${personalityInfo}${idealInfo}${bondInfo}
+- Challenge Rating: ${context.challengeRating || '1'}${genderInfo}${flavorInfo}${personalityInfo}${idealInfo}${bondInfo}
 ${context.biography ? `- Existing notes: ${context.biography}` : ''}
 
-Write ONE concise paragraph (3-5 sentences) that includes:
+Write TWO paragraphs:
+
+FIRST PARAGRAPH (3-5 sentences):
 1. Who they are and their background
-2. Physical appearance and distinguishing features
-3. How their personality and ideals shape their demeanor
-${context.flavor ? `4. Elements appropriate to the ${context.flavor} setting` : ''}
+2. How their personality and ideals shape their demeanor
+${context.flavor ? `3. Elements appropriate to the ${context.flavor} setting` : ''}
+
+SECOND PARAGRAPH (2-3 sentences):
+1. Physical appearance and distinguishing features
+2. Notable characteristics that would be visible in a portrait
+3. Clothing or equipment that defines their appearance
 
 ${context.flavor ? `IMPORTANT: Incorporate elements from the ${context.flavor} flavor/setting, but DO NOT mention specific locations that may conflict with the GM's world.` : 'IMPORTANT: DO NOT mention any specific locations, place names, cities, forests, or geographical features. Keep the description generic so it fits any campaign setting.'}
 
-Format the output as HTML wrapped in a <p> tag. Return ONLY the HTML paragraph, no other text.`;
+Format the output as HTML with TWO separate <p> tags. Return ONLY the HTML paragraphs, no other text.`;
   }
 
   protected buildPortraitPrompt(context: any): string {
-    // Get art style from settings, default to "fantasy realistic"
+    // Use art style from context (modal selection) or fall back to settings
     const artStyle =
-      ((game.settings as any)?.get(MODULE_ID, 'portraitArtStyle') as string) || 'fantasy realistic';
+      context.artStyle ||
+      ((game.settings as any)?.get(MODULE_ID, 'portraitArtStyle') as string) ||
+      'fantasy painting';
 
+    const name = context.name || '';
+    const gender = context.gender || '';
     const role = context.role || 'adventurer';
     const species = context.species || 'human';
     const personality = context.personality || '';
     const flavor = context.flavor || '';
+    const biography = context.biography || '';
 
     // Build descriptive prompt for DALL-E (excluding alignment to avoid content policy issues)
-    let prompt = `A detailed character portrait of a ${species} ${role}`;
+    let prompt = `A character portrait of a ${species} ${role}`;
+
+    // Add gender if specified
+    if (gender) {
+      prompt += `, ${gender.toLowerCase()}`;
+    }
+
+    // Add name if specified
+    if (name) {
+      prompt += ` named ${name}`;
+    }
 
     // Add flavor-specific context
     if (flavor) {
       prompt += ` in a ${flavor} setting`;
     }
 
-    prompt += `, ${artStyle} art style`;
+    prompt += `, ${artStyle} style`;
 
     // Add more flavor context if available
     if (flavor) {
-      prompt += `, inspired by ${flavor} aesthetics`;
+      prompt += `, ${flavor} inspired`;
     }
 
-    prompt += `, head and shoulders view, detailed facial features, dramatic lighting`;
+    prompt += `, head and shoulders, detailed face, dramatic lighting`;
 
     if (personality) {
       prompt += `, ${personality} expression`;
     }
 
-    prompt += `, professional ${artStyle} artwork`;
+    // Add physical description from biography if available
+    if (biography) {
+      // Extract text from the second paragraph (physical description)
+      // Biography should have two <p> tags: first for story, second for physical description
+      const paragraphMatch = biography.match(/<p[^>]*>([\s\S]*?)<\/p>/g);
+
+      if (paragraphMatch && paragraphMatch.length >= 2) {
+        // Get second paragraph (physical description)
+        const physicalPara = paragraphMatch[1].replace(/<[^>]*>/g, '').trim();
+        if (physicalPara) {
+          // Limit to 400 characters
+          const excerpt = physicalPara.substring(0, 400);
+          prompt += `. Physical appearance: ${excerpt}`;
+        }
+      } else if (paragraphMatch && paragraphMatch.length === 1) {
+        // Fallback: if only one paragraph, use it but limit length
+        const bioText = paragraphMatch[0].replace(/<[^>]*>/g, '').trim();
+        if (bioText) {
+          const excerpt = bioText.substring(0, 400);
+          prompt += `. Physical appearance: ${excerpt}`;
+        }
+      }
+    }
 
     return prompt;
   }
@@ -210,7 +255,7 @@ export class OpenAIProvider extends AIProvider {
         try {
           const errorData = JSON.parse(errorText);
           throw new Error(errorData.error?.message || `HTTP ${response.status}`);
-        } catch (e) {
+        } catch {
           throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
       }
@@ -252,30 +297,67 @@ export class OpenAIProvider extends AIProvider {
   }
 
   /**
-   * Generate portrait image using DALL-E 3
+   * Generate portrait image using DALL-E
    */
   async generatePortraitImage(request: AIGenerationRequest): Promise<AIGenerationResponse> {
     const prompt = this.buildPrompt(request);
     const npcName = request.context.name || 'NPC';
+    const model = request.context.dalleModel || 'dall-e-3';
+    const size = request.context.dalleSize || '1024x1024';
+    const quality = request.context.dalleQuality || 'standard';
 
     try {
-      // DALL-E 3 API endpoint
+      // DALL-E API endpoint
       const dalleURL = 'https://api.openai.com/v1/images/generations';
       const url = this.corsProxy + dalleURL;
 
-      const requestBody = {
-        model: 'dall-e-3',
+      const requestBody: any = {
+        model: model,
         prompt: prompt,
         n: 1,
-        size: '1024x1024',
-        quality: 'standard'
+        size: size
       };
 
-      console.log("Dorman Lakely's NPC Gen | DALL-E Request:", { prompt, size: '1024x1024' });
+      // Add quality parameter based on model
+      if (model === 'dall-e-3') {
+        requestBody.quality = quality; // 'standard' or 'hd'
+      } else if (model === 'gpt-image-1') {
+        requestBody.quality = quality; // 'medium', 'high', or 'auto'
+        // Note: gpt-image-1 does not support the 'style' parameter
+      }
+      // DALL-E 2 doesn't support quality parameter
 
-      // Show cost warning
+      console.log("Dorman Lakely's NPC Gen | Image Generation Request:", {
+        model,
+        prompt,
+        size,
+        quality: model !== 'dall-e-2' ? quality : 'N/A (DALL-E 2)'
+      });
+
+      // Calculate and show cost warning
+      let estimatedCost = 0.04;
+      if (model === 'dall-e-3') {
+        if (size === '1024x1024') {
+          estimatedCost = quality === 'hd' ? 0.08 : 0.04;
+        } else {
+          estimatedCost = quality === 'hd' ? 0.12 : 0.08;
+        }
+      } else if (model === 'gpt-image-1') {
+        // GPT-4o pricing (similar to DALL-E 3)
+        if (size === '1024x1024') {
+          estimatedCost = quality === 'high' ? 0.08 : 0.04;
+        } else {
+          estimatedCost = quality === 'high' ? 0.12 : 0.08;
+        }
+      } else {
+        // DALL-E 2
+        if (size === '1024x1024') estimatedCost = 0.02;
+        else if (size === '512x512') estimatedCost = 0.018;
+        else if (size === '256x256') estimatedCost = 0.016;
+      }
+
       ui.notifications?.info(
-        'Generating portrait... This will cost approximately $0.04 and may take 15-30 seconds.',
+        `Generating portrait... This will cost approximately $${estimatedCost.toFixed(3)} and may take 15-30 seconds.`,
         { permanent: false }
       );
 
@@ -329,19 +411,31 @@ export class OpenAIProvider extends AIProvider {
       }
 
       const data = await response.json();
-      const imageUrl = data.data[0]?.url;
+      console.log("Dorman Lakely's NPC Gen | API Response Data:", data);
 
-      if (!imageUrl) {
+      const imageUrl = data.data?.[0]?.url;
+      const base64Data = data.data?.[0]?.b64_json;
+
+      if (!imageUrl && !base64Data) {
+        console.error("Dorman Lakely's NPC Gen | No image URL or base64 data in response:", data);
         throw new Error(
           'No image was generated. This is unusual - please try again or contact support if the issue persists.'
         );
       }
 
-      console.log("Dorman Lakely's NPC Gen | DALL-E image URL received:", imageUrl);
+      let localPath: string | null = null;
 
-      // Download and save the image
-      ui.notifications?.info('Downloading and saving portrait...', { permanent: false });
-      const localPath = await ImageService.downloadAndSave(imageUrl, npcName);
+      if (base64Data) {
+        // Handle base64 response
+        console.log("Dorman Lakely's NPC Gen | Base64 image data received");
+        ui.notifications?.info('Saving portrait...', { permanent: false });
+        localPath = await ImageService.saveBase64Image(base64Data, npcName);
+      } else if (imageUrl) {
+        // Handle URL response
+        console.log("Dorman Lakely's NPC Gen | Image URL received:", imageUrl);
+        ui.notifications?.info('Downloading and saving portrait...', { permanent: false });
+        localPath = await ImageService.downloadAndSave(imageUrl, npcName);
+      }
 
       if (!localPath) {
         throw new Error(
@@ -356,7 +450,7 @@ export class OpenAIProvider extends AIProvider {
       return {
         success: true,
         content: localPath,
-        estimatedCost: 0.04 // DALL-E 3 standard 1024x1024 cost
+        estimatedCost: estimatedCost
       };
     } catch (error: any) {
       console.error("Dorman Lakely's NPC Gen | DALL-E API Error:", error);

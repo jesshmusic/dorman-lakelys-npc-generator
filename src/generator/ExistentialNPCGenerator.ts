@@ -392,10 +392,10 @@ export class NPCGenerator {
     return abilityEntries.slice(0, numSaves).map(([ability]) => ability);
   }
 
-  private static generateAbilities(cr: string, species: string): NPC['abilities'] {
+  private static generateAbilities(cr: string, species: string, role: string): NPC['abilities'] {
     const stats = getCRStats(cr);
     const base = stats.baseAbilityScore;
-    const variance = 2;
+    const variance = 3; // Increased from 2 for more variety
 
     // Apply species modifiers
     const speciesModifiers: Record<string, Partial<NPC['abilities']>> = {
@@ -413,16 +413,70 @@ export class NPCGenerator {
       Kobold: { dex: 2, str: -2 }
     };
 
-    const mods = speciesModifiers[species] || {};
+    // Role-based ability priorities (primary stats get +2-4, secondary +1-2)
+    const roleModifiers: Record<string, Partial<NPC['abilities']>> = {
+      // Martial Classes - STR/DEX focused
+      Fighter: { str: 3, con: 2, dex: 1 },
+      Barbarian: { str: 4, con: 3, dex: 1 },
+      Paladin: { str: 3, cha: 2, con: 1 },
+      Ranger: { dex: 3, wis: 2, con: 1 },
+      Monk: { dex: 3, wis: 2, str: 1 },
+
+      // Dexterity-based
+      Rogue: { dex: 4, int: 2, cha: 1 },
+
+      // Spellcasters - Mental stats
+      Wizard: { int: 4, con: 1, dex: 1 },
+      Sorcerer: { cha: 4, con: 2, dex: 1 },
+      Warlock: { cha: 4, con: 2, dex: 1 },
+      Bard: { cha: 4, dex: 2, con: 1 },
+      Cleric: { wis: 4, con: 2, str: 1 },
+      Druid: { wis: 4, con: 2, int: 1 },
+
+      // Non-adventurer roles - varied stats
+      Noble: { cha: 3, int: 2, wis: 1 },
+      Merchant: { cha: 3, int: 2, wis: 1 },
+      Guard: { str: 2, con: 2, dex: 1 },
+      Priest: { wis: 3, cha: 2, con: 1 },
+      Scholar: { int: 4, wis: 2 },
+      Thief: { dex: 4, cha: 1, int: 1 },
+      Blacksmith: { str: 3, con: 3 },
+      Innkeeper: { cha: 2, wis: 2, con: 1 },
+      Healer: { wis: 3, int: 2, cha: 1 },
+      Entertainer: { cha: 4, dex: 2 },
+      Sailor: { str: 2, dex: 2, con: 2 },
+      Explorer: { con: 2, wis: 2, dex: 2 },
+
+      // Add defaults for other roles
+      Spy: { dex: 3, cha: 2, int: 2 },
+      Assassin: { dex: 4, int: 2 },
+      'Bounty Hunter': { str: 2, dex: 2, wis: 2 },
+      Smuggler: { dex: 3, cha: 2, int: 1 },
+      Pirate: { str: 2, dex: 2, con: 2 },
+      Bandit: { dex: 3, str: 2 },
+      Mercenary: { str: 3, con: 2 },
+      Guildmaster: { cha: 3, int: 2, wis: 2 },
+      Diplomat: { cha: 4, wis: 2, int: 1 },
+      Alchemist: { int: 4, dex: 2 },
+      'Fortune Teller': { wis: 3, cha: 3 },
+      Cultist: { cha: 2, wis: 2, int: 1 },
+      Witch: { int: 3, wis: 3 },
+      Hermit: { wis: 4, con: 2 }
+    };
+
+    const speciesMods = speciesModifiers[species] || {};
+    const roleMods = roleModifiers[role] || { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 };
+
+    // Random variance for each ability
     const rand = () => Math.floor(Math.random() * variance * 2) - variance;
 
     return {
-      str: Math.max(1, base + rand() + (mods.str || 0)),
-      dex: Math.max(1, base + rand() + (mods.dex || 0)),
-      con: Math.max(1, base + rand() + (mods.con || 0)),
-      int: Math.max(1, base + rand() + (mods.int || 0)),
-      wis: Math.max(1, base + rand() + (mods.wis || 0)),
-      cha: Math.max(1, base + rand() + (mods.cha || 0))
+      str: Math.max(1, base + rand() + (speciesMods.str || 0) + (roleMods.str || 0)),
+      dex: Math.max(1, base + rand() + (speciesMods.dex || 0) + (roleMods.dex || 0)),
+      con: Math.max(1, base + rand() + (speciesMods.con || 0) + (roleMods.con || 0)),
+      int: Math.max(1, base + rand() + (speciesMods.int || 0) + (roleMods.int || 0)),
+      wis: Math.max(1, base + rand() + (speciesMods.wis || 0) + (roleMods.wis || 0)),
+      cha: Math.max(1, base + rand() + (speciesMods.cha || 0) + (roleMods.cha || 0))
     };
   }
 
@@ -456,7 +510,7 @@ export class NPCGenerator {
     const species = data.species || NPCGenerator.SPECIES[0];
     const cr = data.challengeRating || NPCGenerator.CHALLENGE_RATINGS[0];
     const classType = data.class || NPCGenerator.ROLES[0];
-    const abilities = this.generateAbilities(cr, species);
+    const abilities = this.generateAbilities(cr, species, classType);
     const stats = getCRStats(cr);
 
     // HP is directly from DMG chart, with small CON modifier adjustment

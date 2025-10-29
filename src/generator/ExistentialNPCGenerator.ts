@@ -41,6 +41,7 @@ export interface NPC {
 
 export class NPCGenerator {
   static readonly SPECIES = [
+    // Common PC Races
     'Human',
     'Elf',
     'Dwarf',
@@ -50,9 +51,35 @@ export class NPCGenerator {
     'Half-Orc',
     'Tiefling',
     'Dragonborn',
+    // Exotic PC Races
+    'Aarakocra',
+    'Firbolg',
+    'Genasi',
+    'Goliath',
+    'Kenku',
+    'Tabaxi',
+    'Triton',
+    'Tortle',
+    'Yuan-ti Pureblood',
+    // Monstrous Humanoids
     'Goblin',
+    'Hobgoblin',
+    'Bugbear',
     'Orc',
-    'Kobold'
+    'Kobold',
+    'Gnoll',
+    'Lizardfolk',
+    'Bullywug',
+    'Grung',
+    'Troglodyte',
+    // Large Humanoids
+    'Ogre',
+    'Troll',
+    'Minotaur',
+    'Centaur',
+    // Fey Humanoids
+    'Satyr',
+    'Changeling'
   ];
 
   static readonly FLAVORS = [
@@ -288,6 +315,7 @@ export class NPCGenerator {
 
   private static getSpeed(species: string): NPC['speed'] {
     const speedMap: Record<string, NPC['speed']> = {
+      // Common PC Races
       Human: { walk: 30 },
       Elf: { walk: 30 },
       Dwarf: { walk: 25 },
@@ -297,15 +325,42 @@ export class NPCGenerator {
       'Half-Orc': { walk: 30 },
       Tiefling: { walk: 30 },
       Dragonborn: { walk: 30 },
+      // Exotic PC Races
+      Aarakocra: { walk: 25, fly: 50 },
+      Firbolg: { walk: 30 },
+      Genasi: { walk: 30 },
+      Goliath: { walk: 30 },
+      Kenku: { walk: 30 },
+      Tabaxi: { walk: 30, climb: 20 },
+      Triton: { walk: 30, swim: 30 },
+      Tortle: { walk: 30 },
+      'Yuan-ti Pureblood': { walk: 30 },
+      // Monstrous Humanoids
       Goblin: { walk: 30 },
+      Hobgoblin: { walk: 30 },
+      Bugbear: { walk: 30 },
       Orc: { walk: 30 },
-      Kobold: { walk: 30 }
+      Kobold: { walk: 30 },
+      Gnoll: { walk: 30 },
+      Lizardfolk: { walk: 30, swim: 30 },
+      Bullywug: { walk: 20, swim: 40 },
+      Grung: { walk: 25, climb: 25 },
+      Troglodyte: { walk: 30 },
+      // Large Humanoids
+      Ogre: { walk: 40 },
+      Troll: { walk: 30 },
+      Minotaur: { walk: 40 },
+      Centaur: { walk: 40 },
+      // Fey Humanoids
+      Satyr: { walk: 35 },
+      Changeling: { walk: 30 }
     };
     return speedMap[species] || { walk: 30 };
   }
 
   private static getLanguages(species: string): string[] {
     const languageMap: Record<string, string[]> = {
+      // Common PC Races
       Human: ['Common'],
       Elf: ['Common', 'Elvish'],
       Dwarf: ['Common', 'Dwarvish'],
@@ -315,9 +370,35 @@ export class NPCGenerator {
       'Half-Orc': ['Common', 'Orc'],
       Tiefling: ['Common', 'Infernal'],
       Dragonborn: ['Common', 'Draconic'],
+      // Exotic PC Races
+      Aarakocra: ['Common', 'Aarakocra', 'Auran'],
+      Firbolg: ['Common', 'Elvish', 'Giant'],
+      Genasi: ['Common', 'Primordial'],
+      Goliath: ['Common', 'Giant'],
+      Kenku: ['Common', 'Auran'],
+      Tabaxi: ['Common'],
+      Triton: ['Common', 'Primordial'],
+      Tortle: ['Common', 'Aquan'],
+      'Yuan-ti Pureblood': ['Common', 'Abyssal', 'Draconic'],
+      // Monstrous Humanoids
       Goblin: ['Common', 'Goblin'],
+      Hobgoblin: ['Common', 'Goblin'],
+      Bugbear: ['Common', 'Goblin'],
       Orc: ['Common', 'Orc'],
-      Kobold: ['Common', 'Draconic']
+      Kobold: ['Common', 'Draconic'],
+      Gnoll: ['Gnoll'],
+      Lizardfolk: ['Draconic'],
+      Bullywug: ['Bullywug'],
+      Grung: ['Grung'],
+      Troglodyte: ['Troglodyte'],
+      // Large Humanoids
+      Ogre: ['Common', 'Giant'],
+      Troll: ['Giant'],
+      Minotaur: ['Abyssal'],
+      Centaur: ['Elvish', 'Sylvan'],
+      // Fey Humanoids
+      Satyr: ['Common', 'Elvish', 'Sylvan'],
+      Changeling: ['Common']
     };
     return languageMap[species] || ['Common'];
   }
@@ -397,20 +478,47 @@ export class NPCGenerator {
     const base = stats.baseAbilityScore;
     const variance = 3; // Increased from 2 for more variety
 
-    // Apply species modifiers
+    // Apply species modifiers (based on D&D 5e racial traits)
     const speciesModifiers: Record<string, Partial<NPC['abilities']>> = {
+      // Common PC Races
       Human: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
-      Elf: { dex: 2 },
-      Dwarf: { con: 2 },
-      Halfling: { dex: 2 },
-      Gnome: { int: 2 },
-      'Half-Elf': { cha: 2 },
+      Elf: { dex: 2, int: 1 },
+      Dwarf: { con: 2, wis: 1 },
+      Halfling: { dex: 2, cha: 1 },
+      Gnome: { int: 2, dex: 1 },
+      'Half-Elf': { cha: 2, dex: 1, con: 1 },
       'Half-Orc': { str: 2, con: 1 },
       Tiefling: { cha: 2, int: 1 },
       Dragonborn: { str: 2, cha: 1 },
+      // Exotic PC Races
+      Aarakocra: { dex: 2, wis: 1 },
+      Firbolg: { wis: 2, str: 1 },
+      Genasi: { con: 2 }, // Varies by type, using generic
+      Goliath: { str: 2, con: 1 },
+      Kenku: { dex: 2, wis: 1 },
+      Tabaxi: { dex: 2, cha: 1 },
+      Triton: { str: 1, con: 1, cha: 1 },
+      Tortle: { str: 2, wis: 1 },
+      'Yuan-ti Pureblood': { cha: 2, int: 1 },
+      // Monstrous Humanoids (Small/Medium)
       Goblin: { dex: 2, con: 1 },
-      Orc: { str: 2, con: 1, int: -2 },
-      Kobold: { dex: 2, str: -2 }
+      Hobgoblin: { con: 2, int: 1 },
+      Bugbear: { str: 2, dex: 1 },
+      Orc: { str: 2, con: 1, int: -1 },
+      Kobold: { dex: 2, str: -2 },
+      Gnoll: { str: 2, con: 1 },
+      Lizardfolk: { con: 2, wis: 1 },
+      Bullywug: { str: 1, dex: 1 },
+      Grung: { dex: 2, con: 1 },
+      Troglodyte: { str: 1, con: 2, int: -2 },
+      // Large Humanoids
+      Ogre: { str: 4, con: 2, int: -2, cha: -1 },
+      Troll: { str: 3, con: 3, int: -2, wis: -1 },
+      Minotaur: { str: 2, con: 1 },
+      Centaur: { str: 2, wis: 1 },
+      // Fey Humanoids
+      Satyr: { cha: 2, dex: 1 },
+      Changeling: { cha: 2, dex: 1 }
     };
 
     // Role-based ability priorities (primary stats get +2-4, secondary +1-2)

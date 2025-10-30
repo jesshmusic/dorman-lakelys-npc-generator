@@ -15,7 +15,12 @@ export default function incrementBuild() {
       // Read existing build info
       if (fs.existsSync(buildInfoPath)) {
         const content = fs.readFileSync(buildInfoPath, 'utf-8');
-        buildInfo = JSON.parse(content);
+        try {
+          buildInfo = JSON.parse(content);
+        } catch (err) {
+          console.warn(`Warning: Failed to parse build-info.json. Using default build info. Error: ${err.message}`);
+          buildInfo = { buildNumber: 0 };
+        }
       }
 
       // Increment build number

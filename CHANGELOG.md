@@ -21,7 +21,7 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - quality of life fixes
-- simplify startup console messages
+- Simplify startup console messages
 - bump version to 1.1.0
 
 ### Other

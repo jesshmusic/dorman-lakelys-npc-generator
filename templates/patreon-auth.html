@@ -1,0 +1,297 @@
+<div class="patreon-auth-dialog">
+    {{#if isConfigured}}
+        {{#if isAuthenticated}}
+            <!-- Authenticated State -->
+            <div class="auth-status authenticated">
+                <div class="status-icon">
+                    <i class="fab fa-patreon"></i>
+                </div>
+                <h2>Connected to Patreon</h2>
+                <p class="tier-badge {{tier}}">{{tierDisplayName}}</p>
+
+                <div class="features-box">
+                    <h3>Your Features:</h3>
+                    <ul class="feature-list">
+                        {{#each tierFeatures}}
+                        <li><i class="fas fa-check"></i> {{this}}</li>
+                        {{/each}}
+                    </ul>
+                </div>
+
+                <div class="action-buttons">
+                    <button type="button" data-action="disconnect" class="disconnect-button">
+                        <i class="fas fa-unlink"></i> Disconnect
+                    </button>
+                    <button type="button" data-action="close" class="bright">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+        {{else if isAuthenticating}}
+            <!-- Authenticating State -->
+            <div class="auth-status authenticating">
+                <div class="status-icon">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+                <h2>Authenticating...</h2>
+                <p>Please complete the authentication in the Patreon window.</p>
+                <p class="hint">This may take up to 60 seconds.</p>
+
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+            </div>
+        {{else}}
+            <!-- Not Authenticated State -->
+            <div class="auth-status not-authenticated">
+                <div class="status-icon">
+                    <i class="fab fa-patreon"></i>
+                </div>
+                <h2>Connect Your Patreon Account</h2>
+                <p>Unlock AI-powered features by connecting your Patreon membership.</p>
+
+                <div class="tiers-comparison">
+                    <h3>Available Tiers:</h3>
+
+                    {{#each allTiers}}
+                    <div class="tier-card {{name}}">
+                        <h4>{{displayName}}</h4>
+                        <ul class="feature-list">
+                            {{#each features}}
+                            <li><i class="fas fa-check"></i> {{this}}</li>
+                            {{/each}}
+                        </ul>
+                    </div>
+                    {{/each}}
+                </div>
+
+                <div class="info-box">
+                    <p><strong>How it works:</strong></p>
+                    <ol>
+                        <li>Click "Connect Patreon" below</li>
+                        <li>Authenticate with your Patreon account</li>
+                        <li>Your membership tier will be automatically detected</li>
+                        <li>Start using AI features immediately!</li>
+                    </ol>
+                </div>
+
+                <div class="action-buttons">
+                    <button type="button" data-action="connect" class="connect-button bright">
+                        <i class="fab fa-patreon"></i> Connect Patreon
+                    </button>
+                    <button type="button" data-action="close">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                </div>
+
+                <p class="footer-note">
+                    Don't have a Patreon membership?
+                    <a href="https://www.patreon.com/c/ExistentialArts/membership" target="_blank">Join here</a>
+                </p>
+            </div>
+        {{/if}}
+    {{else}}
+        <!-- Not Configured State -->
+        <div class="auth-status error">
+            <div class="status-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h2>Patreon Not Configured</h2>
+            <p>The Patreon integration has not been set up yet. Please contact the module developer.</p>
+
+            <div class="action-buttons">
+                <button type="button" data-action="close" class="bright">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    {{/if}}
+</div>
+
+<style>
+    .patreon-auth-dialog {
+        padding: 20px;
+    }
+
+    .auth-status {
+        text-align: center;
+    }
+
+    .status-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        color: #f96854;
+    }
+
+    .auth-status.authenticating .status-icon {
+        color: #2196f3;
+    }
+
+    .auth-status.error .status-icon {
+        color: #ff9800;
+    }
+
+    .auth-status h2 {
+        margin-bottom: 12px;
+        color: #ff5252;
+    }
+
+    .tier-badge {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: bold;
+        margin: 12px 0;
+    }
+
+    .tier-badge.apprentice {
+        background: #4caf50;
+        color: white;
+    }
+
+    .tier-badge.wizard {
+        background: #9c27b0;
+        color: white;
+    }
+
+    .features-box,
+    .info-box {
+        background: #2a2a2a;
+        padding: 16px;
+        border-radius: 8px;
+        margin: 16px 0;
+        text-align: left;
+    }
+
+    .features-box h3,
+    .info-box p strong {
+        color: #ff5252;
+        margin-bottom: 12px;
+    }
+
+    .feature-list {
+        list-style: none;
+        padding: 0;
+        margin: 8px 0;
+    }
+
+    .feature-list li {
+        padding: 6px 0;
+        padding-left: 24px;
+        position: relative;
+    }
+
+    .feature-list li i {
+        position: absolute;
+        left: 0;
+        color: #4caf50;
+    }
+
+    .tiers-comparison {
+        margin: 20px 0;
+    }
+
+    .tiers-comparison h3 {
+        color: #ff5252;
+        margin-bottom: 12px;
+    }
+
+    .tier-card {
+        background: #2a2a2a;
+        padding: 16px;
+        border-radius: 8px;
+        margin: 12px 0;
+        border-left: 4px solid #4caf50;
+        text-align: left;
+    }
+
+    .tier-card.wizard {
+        border-left-color: #9c27b0;
+    }
+
+    .tier-card h4 {
+        color: #ff7979;
+        margin-bottom: 8px;
+    }
+
+    .info-box ol {
+        margin: 12px 0;
+        padding-left: 20px;
+    }
+
+    .info-box ol li {
+        margin: 6px 0;
+    }
+
+    .action-buttons {
+        margin-top: 24px;
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+    }
+
+    .action-buttons button {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+
+    .connect-button {
+        background: #f96854;
+        color: white;
+    }
+
+    .connect-button:hover {
+        background: #ff7e6b;
+    }
+
+    .disconnect-button {
+        background: #666;
+    }
+
+    .disconnect-button:hover {
+        background: #888;
+    }
+
+    .progress-bar {
+        width: 100%;
+        height: 4px;
+        background: #444;
+        border-radius: 2px;
+        overflow: hidden;
+        margin: 20px 0;
+    }
+
+    .progress-fill {
+        width: 0;
+        height: 100%;
+        background: linear-gradient(90deg, #f96854, #ff7e6b);
+        animation: progress 60s linear forwards;
+    }
+
+    @keyframes progress {
+        to {
+            width: 100%;
+        }
+    }
+
+    .hint {
+        font-size: 12px;
+        color: #888;
+        margin-top: 8px;
+    }
+
+    .footer-note {
+        margin-top: 16px;
+        font-size: 12px;
+        color: #888;
+    }
+
+    .footer-note a {
+        color: #4caf50;
+        text-decoration: none;
+    }
+
+    .footer-note a:hover {
+        text-decoration: underline;
+    }
+</style>

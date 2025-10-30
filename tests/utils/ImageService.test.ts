@@ -19,7 +19,8 @@ describe('ImageService', () => {
       // We can't test the private method directly, but we can verify
       // that repeated calls would generate different files via timestamp
 
-      const mockBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      const mockBase64 =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
       // Mock FilePicker
       let uploadCount = 0;
@@ -72,7 +73,9 @@ describe('ImageService', () => {
     it('should return false on error', async () => {
       const mockFilePicker = FilePicker as any;
       mockFilePicker.browse = jest.fn<any>().mockRejectedValue(new Error('Permission denied'));
-      mockFilePicker.createDirectory = jest.fn<any>().mockRejectedValue(new Error('Permission denied'));
+      mockFilePicker.createDirectory = jest
+        .fn<any>()
+        .mockRejectedValue(new Error('Permission denied'));
 
       const result = await ImageService.ensureImageDirectory();
 
@@ -82,13 +85,16 @@ describe('ImageService', () => {
 
   describe('saveBase64Image', () => {
     it('should save base64 image data successfully', async () => {
-      const mockBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      const mockBase64 =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
       const npcName = 'Test NPC';
 
       const mockFilePicker = FilePicker as any;
       mockFilePicker.browse = jest.fn<any>().mockResolvedValue({ files: [] });
       mockFilePicker.createDirectory = jest.fn<any>().mockResolvedValue({});
-      mockFilePicker.upload = jest.fn<any>().mockResolvedValue({ path: '/mock/path/test_npc_12345.png' });
+      mockFilePicker.upload = jest
+        .fn<any>()
+        .mockResolvedValue({ path: '/mock/path/test_npc_12345.png' });
 
       const result = await ImageService.saveBase64Image(mockBase64, npcName);
 
@@ -102,7 +108,9 @@ describe('ImageService', () => {
 
       const mockFilePicker = FilePicker as any;
       mockFilePicker.browse = jest.fn<any>().mockRejectedValue(new Error('Permission denied'));
-      mockFilePicker.createDirectory = jest.fn<any>().mockRejectedValue(new Error('Permission denied'));
+      mockFilePicker.createDirectory = jest
+        .fn<any>()
+        .mockRejectedValue(new Error('Permission denied'));
 
       const result = await ImageService.saveBase64Image(mockBase64, npcName);
 
@@ -110,7 +118,8 @@ describe('ImageService', () => {
     });
 
     it('should return null if upload fails', async () => {
-      const mockBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      const mockBase64 =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
       const npcName = 'Test NPC';
 
       const mockFilePicker = FilePicker as any;
@@ -138,7 +147,9 @@ describe('ImageService', () => {
       const mockFilePicker = FilePicker as any;
       mockFilePicker.browse = jest.fn<any>().mockResolvedValue({ files: [] });
       mockFilePicker.createDirectory = jest.fn<any>().mockResolvedValue({});
-      mockFilePicker.upload = jest.fn<any>().mockResolvedValue({ path: '/mock/path/test_npc_12345.png' });
+      mockFilePicker.upload = jest
+        .fn<any>()
+        .mockResolvedValue({ path: '/mock/path/test_npc_12345.png' });
 
       const result = await ImageService.downloadAndSave(imageUrl, npcName);
 
@@ -167,7 +178,9 @@ describe('ImageService', () => {
       const mockFilePicker = FilePicker as any;
       mockFilePicker.browse = jest.fn<any>().mockResolvedValue({ files: [] });
       mockFilePicker.createDirectory = jest.fn<any>().mockResolvedValue({});
-      mockFilePicker.upload = jest.fn<any>().mockResolvedValue({ path: '/mock/path/test_npc_12345.png' });
+      mockFilePicker.upload = jest
+        .fn<any>()
+        .mockResolvedValue({ path: '/mock/path/test_npc_12345.png' });
 
       const result = await ImageService.downloadAndSave(imageUrl, npcName);
 

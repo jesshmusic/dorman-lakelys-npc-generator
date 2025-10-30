@@ -2,6 +2,8 @@
 import { NPCGenerator, NPC } from '../generator/ExistentialNPCGenerator.js';
 import { AIService, AIGenerationRequest } from '../services/AIService.js';
 import { PortraitConfirmationDialog } from './PortraitConfirmationDialog.js';
+import { PatreonService, PatreonTier } from '../services/PatreonService.js';
+import { PatreonAuthDialog } from './PatreonAuthDialog.js';
 import { parseCR } from '../utils/crCalculations.js';
 
 const MODULE_ID = 'dorman-lakelys-npc-generator';
@@ -48,6 +50,16 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
     // Check if AI is enabled
     const aiEnabled = ((game.settings as any)?.get(MODULE_ID, 'enableAI') as boolean) || false;
 
+    // Get Patreon authentication status and tier
+    const patreonAuthenticated = PatreonService.isAuthenticated();
+    const patreonTier = PatreonService.getCurrentTier();
+    const patreonTierDisplay = PatreonService.getTierDisplayName(patreonTier);
+
+    // Determine which features are available based on tier
+    const hasNameGeneration = PatreonService.hasFeatureAccess(PatreonTier.APPRENTICE);
+    const hasBioGeneration = PatreonService.hasFeatureAccess(PatreonTier.APPRENTICE);
+    const hasPortraitGeneration = PatreonService.hasFeatureAccess(PatreonTier.WIZARD);
+
     return {
       species: NPCGenerator.SPECIES,
       flavors: NPCGenerator.FLAVORS,
@@ -56,12 +68,31 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
       alignments: NPCGenerator.ALIGNMENTS,
       personalities: NPCGenerator.PERSONALITIES,
       folders,
-      aiEnabled
+      aiEnabled,
+      // Patreon data
+      patreonAuthenticated,
+      patreonTier,
+      patreonTierDisplay,
+      hasNameGeneration,
+      hasBioGeneration,
+      hasPortraitGeneration
     };
   }
 
   _onRender(context: any, options: any): void {
     super._onRender(context, options);
+
+    // Set up Patreon connect button
+    const patreonConnectBtn = this.element.querySelector('[data-action="connect-patreon"]');
+    if (patreonConnectBtn) {
+      (patreonConnectBtn as HTMLElement).onclick = this._onPatreonConnect.bind(this);
+    }
+
+    // Set up Patreon tier badge click (for disconnect/info)
+    const patreonBadge = this.element.querySelector('.patreon-tier-badge');
+    if (patreonBadge) {
+      (patreonBadge as HTMLElement).onclick = this._onPatreonConnect.bind(this);
+    }
 
     // Set up AI generation buttons
     const aiButtons = this.element.querySelectorAll('[data-ai-action]');
@@ -258,6 +289,46 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
   }
 
   /**
+   * Handle Patreon connect button click
+   */
+  async _onPatreonConnect(event: Event): Promise<void> {
+    event.preventDefault();
+    await PatreonAuthDialog.show();
+
+    // Re-render dialog to update tier info
+    this.render();
+  }
+
+  /**
+   * Check if user has required tier for a feature
+   * Shows appropriate error message if not
+   */
+  private _checkFeatureAccess(featureName: string, requiredTier: PatreonTier): boolean {
+    if (!PatreonService.hasFeatureAccess(requiredTier)) {
+      const currentTier = PatreonService.getCurrentTier();
+      const requiredTierName = PatreonService.getTierDisplayName(requiredTier);
+
+      if (currentTier === PatreonTier.FREE) {
+        // Not authenticated at all
+        ui.notifications?.warn(
+          `${featureName} requires a Patreon membership (${requiredTierName} or higher). Click "Connect Patreon" to unlock this feature.`,
+          { permanent: false }
+        );
+      } else {
+        // Authenticated but insufficient tier
+        ui.notifications?.warn(
+          `${featureName} requires ${requiredTierName} tier or higher. Please upgrade your Patreon membership.`,
+          { permanent: false }
+        );
+      }
+
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
    * Handle AI generation button clicks
    */
   async _onAIGenerate(event: Event): Promise<void> {
@@ -266,6 +337,32 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
     const action = button.dataset.aiAction;
 
     if (!action) return;
+
+    // Check tier access before proceeding
+    let requiredTier: PatreonTier;
+    let featureName: string;
+
+    switch (action) {
+      case 'generateName':
+        requiredTier = PatreonTier.APPRENTICE;
+        featureName = 'AI Name Generation';
+        break;
+      case 'generateBio':
+        requiredTier = PatreonTier.APPRENTICE;
+        featureName = 'AI Biography Generation';
+        break;
+      case 'generatePortrait':
+        requiredTier = PatreonTier.WIZARD;
+        featureName = 'AI Portrait Generation';
+        break;
+      default:
+        return;
+    }
+
+    // Validate tier access
+    if (!this._checkFeatureAccess(featureName, requiredTier)) {
+      return; // Access denied
+    }
 
     // Gather context from form
     const context = this._getFormContext();

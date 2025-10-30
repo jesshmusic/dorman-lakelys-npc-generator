@@ -446,3 +446,125 @@
     color: #fff;
     font-weight: bold;
 }
+
+/* ========================================
+   Patreon Status Header Styles
+   ======================================== */
+
+.patreon-status-header {
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+    border: 1px solid var(--color-border-dark);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.patreon-connected {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.patreon-tier-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.patreon-tier-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.patreon-tier-badge.apprentice {
+    background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+    color: white;
+}
+
+.patreon-tier-badge.wizard {
+    background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+    color: white;
+}
+
+.patreon-features-hint {
+    font-size: 12px;
+    color: #4caf50;
+}
+
+.patreon-not-connected {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.patreon-connect-btn {
+    background: linear-gradient(135deg, #f96854 0%, #ff7e6b 100%);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 24px;
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.patreon-connect-btn:hover {
+    background: linear-gradient(135deg, #ff7e6b 0%, #f96854 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(249, 104, 84, 0.4);
+}
+
+.patreon-hint {
+    font-size: 11px;
+    color: #888;
+    margin: 0;
+}
+
+/* Feature Badges (for locked features) */
+.feature-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: bold;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+.feature-badge.apprentice {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+    border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+.feature-badge.wizard {
+    background: rgba(156, 39, 176, 0.2);
+    color: #9c27b0;
+    border: 1px solid rgba(156, 39, 176, 0.4);
+}
+
+/* Locked AI Buttons */
+.ai-assist-btn.locked {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.ai-assist-btn.locked:hover {
+    background-color: var(--color-bg-btn-minor-inactive);
+    transform: none;
+}

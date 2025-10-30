@@ -1,6 +1,7 @@
 // AI Service for NPC generation using OpenAI and Anthropic APIs
 
 import { ImageService } from '../utils/ImageService.js';
+import { PatreonService, PatreonTier } from './PatreonService.js';
 
 const MODULE_ID = 'dorman-lakelys-npc-generator';
 
@@ -528,7 +529,7 @@ export class OpenAIProvider extends AIProvider {
 export class AIService {
   /**
    * Generate content using OpenAI
-   * Only works for GM users
+   * Only works for GM users with appropriate Patreon tier
    */
   static async generate(request: AIGenerationRequest): Promise<AIGenerationResponse> {
     // Only GMs can use AI features
@@ -537,6 +538,16 @@ export class AIService {
         success: false,
         content: '',
         error: 'AI features are only available to GM users'
+      };
+    }
+
+    // Validate Patreon tier for the requested feature
+    const tierCheck = this.validateTierAccess(request.type);
+    if (!tierCheck.hasAccess) {
+      return {
+        success: false,
+        content: '',
+        error: tierCheck.error || 'Insufficient access level'
       };
     }
 
@@ -564,5 +575,54 @@ export class AIService {
     console.log(`Dorman Lakely's NPC Gen | Using OpenAI model: ${model}`);
     const provider = new OpenAIProvider(apiKey, model);
     return await provider.generateContent(request);
+  }
+
+  /**
+   * Validate user has appropriate Patreon tier for feature
+   */
+  private static validateTierAccess(requestType: 'name' | 'biography' | 'portrait'): {
+    hasAccess: boolean;
+    error?: string;
+  } {
+    // Determine required tier based on feature
+    let requiredTier: PatreonTier;
+    let featureName: string;
+
+    switch (requestType) {
+      case 'name':
+        requiredTier = PatreonTier.APPRENTICE;
+        featureName = 'AI Name Generation';
+        break;
+      case 'biography':
+        requiredTier = PatreonTier.APPRENTICE;
+        featureName = 'AI Biography Generation';
+        break;
+      case 'portrait':
+        requiredTier = PatreonTier.WIZARD;
+        featureName = 'AI Portrait Generation';
+        break;
+      default:
+        return { hasAccess: true }; // Unknown type, allow
+    }
+
+    // Check if user has required tier
+    if (!PatreonService.hasFeatureAccess(requiredTier)) {
+      const currentTier = PatreonService.getCurrentTier();
+      const requiredTierName = PatreonService.getTierDisplayName(requiredTier);
+
+      if (currentTier === PatreonTier.FREE) {
+        return {
+          hasAccess: false,
+          error: `${featureName} requires a Patreon membership (${requiredTierName} or higher). Please connect your Patreon account.`
+        };
+      } else {
+        return {
+          hasAccess: false,
+          error: `${featureName} requires ${requiredTierName} tier or higher. Please upgrade your Patreon membership.`
+        };
+      }
+    }
+
+    return { hasAccess: true };
   }
 }

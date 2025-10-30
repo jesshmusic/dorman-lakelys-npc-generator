@@ -2,6 +2,16 @@
 const MODULE_ID = 'dorman-lakelys-npc-generator';
 
 export function registerSettings(): void {
+  // Patreon Authentication (client-scoped, per-user)
+  (game.settings as any)?.register(MODULE_ID, 'patreonAuthData', {
+    name: 'Patreon Authentication Data',
+    hint: 'Stores Patreon authentication state (internal use)',
+    scope: 'client', // Per-user, not per-world
+    config: false, // Hidden from settings UI
+    type: Object,
+    default: null
+  });
+
   // AI Integration Settings
   (game.settings as any)?.register(MODULE_ID, 'enableAI', {
     name: 'Enable AI Features',

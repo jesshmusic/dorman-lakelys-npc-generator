@@ -4,6 +4,25 @@
         <p><strong>Quick NPC Generator:</strong> Fill in the basic details below and {{#if aiEnabled}}use AI to{{else}}manually{{/if}} create your NPC</p>
     </div>
 
+    <!-- Patreon Status Header -->
+    <div class="patreon-status-header">
+        {{#if patreonAuthenticated}}
+            <div class="patreon-connected">
+                <span class="patreon-tier-badge {{patreonTier}}" title="Click to manage Patreon connection">
+                    <i class="fab fa-patreon"></i> {{patreonTierDisplay}}
+                </span>
+                <span class="patreon-features-hint">AI features unlocked</span>
+            </div>
+        {{else}}
+            <div class="patreon-not-connected">
+                <button type="button" class="patreon-connect-btn" data-action="connect-patreon">
+                    <i class="fab fa-patreon"></i> Connect Patreon for AI Features
+                </button>
+                <p class="patreon-hint">Unlock AI name generation, biographies, and portraits with a Patreon membership</p>
+            </div>
+        {{/if}}
+    </div>
+
     <!-- Folder Selection -->
     <div class="form-group" id="folder-select-group">
         <label for="npc-folder">Folder (Optional)</label>
@@ -59,11 +78,18 @@
 
     <!-- Name -->
     <div class="form-group">
-        <label for="npc-name">Name <span class="required">*</span></label>
+        <label for="npc-name">
+            Name <span class="required">*</span>
+            {{#unless hasNameGeneration}}
+                <span class="feature-badge apprentice" title="Requires Apprentice tier or higher">
+                    <i class="fas fa-lock"></i> Apprentice
+                </span>
+            {{/unless}}
+        </label>
         <div class="input-with-ai">
             <input type="text" id="npc-name" name="name" placeholder="Enter NPC name" required />
             {{#if aiEnabled}}
-            <button type="button" class="ai-assist-btn" data-ai-action="generateName" title="Generate Name">
+            <button type="button" class="ai-assist-btn {{#unless hasNameGeneration}}locked{{/unless}}" data-ai-action="generateName" title="{{#if hasNameGeneration}}Generate Name{{else}}Requires Apprentice tier{{/if}}">
                 <i class="fas fa-wand-magic-sparkles"></i>
             </button>
             {{/if}}
@@ -109,11 +135,18 @@
 
     <!-- Biography -->
     <div class="form-group">
-        <label for="npc-biography">Biography</label>
+        <label for="npc-biography">
+            Biography
+            {{#unless hasBioGeneration}}
+                <span class="feature-badge apprentice" title="Requires Apprentice tier or higher">
+                    <i class="fas fa-lock"></i> Apprentice
+                </span>
+            {{/unless}}
+        </label>
         <div class="input-with-ai">
             <textarea id="npc-biography" name="biography" rows="6" placeholder="Enter NPC biography"></textarea>
             {{#if aiEnabled}}
-            <button type="button" class="ai-assist-btn" data-ai-action="generateBio" title="Generate Biography">
+            <button type="button" class="ai-assist-btn {{#unless hasBioGeneration}}locked{{/unless}}" data-ai-action="generateBio" title="{{#if hasBioGeneration}}Generate Biography{{else}}Requires Apprentice tier{{/if}}">
                 <i class="fas fa-wand-magic-sparkles"></i>
             </button>
             {{/if}}
@@ -122,11 +155,18 @@
 
     <!-- Portrait -->
     <div class="form-group">
-        <label for="npc-portrait">Portrait (Optional)</label>
+        <label for="npc-portrait">
+            Portrait (Optional)
+            {{#unless hasPortraitGeneration}}
+                <span class="feature-badge wizard" title="Requires Wizard tier">
+                    <i class="fas fa-lock"></i> Wizard
+                </span>
+            {{/unless}}
+        </label>
         <div class="file-input-group">
             <input type="text" id="npc-portrait" name="portrait" placeholder="Path to portrait image" />
             {{#if aiEnabled}}
-            <button type="button" class="ai-assist-btn" data-ai-action="generatePortrait" title="Generate Portrait ($0.04)">
+            <button type="button" class="ai-assist-btn {{#unless hasPortraitGeneration}}locked{{/unless}}" data-ai-action="generatePortrait" title="{{#if hasPortraitGeneration}}Generate Portrait ($0.04){{else}}Requires Wizard tier{{/if}}">
                 <i class="fas fa-wand-magic-sparkles"></i>
             </button>
             {{/if}}

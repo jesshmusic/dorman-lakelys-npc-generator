@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
+import incrementBuild from './vite-plugin-increment-build.mjs';
 
 export default defineConfig({
+  plugins: [incrementBuild()],
   build: {
     outDir: 'scripts',
     emptyOutDir: true,

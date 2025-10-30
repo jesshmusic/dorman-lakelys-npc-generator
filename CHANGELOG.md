@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.2.3] - 2025-10-30
 
 ### Added
-- simplifies portrait prompt somewhat
+- Simplified portrait prompt somewhat
 - chore: add release script for automated version bumping
 - Add configurable temperature/randomness settings for AI generation
 - Add species dropdown and multi-select personality pills

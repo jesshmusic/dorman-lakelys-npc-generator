@@ -2,11 +2,6 @@ name: Manual Release
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (without v prefix, e.g., 1.0.0)'
-        required: true
-        type: string
 
 jobs:
   release:
@@ -25,19 +20,18 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Validate version format
+      - name: Get version from package.json
+        id: version
         run: |
-          if ! [[ "${{ github.event.inputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "::error::Invalid version format. Use semantic versioning (e.g., 1.0.0)"
-            exit 1
-          fi
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Manual release for version: $VERSION"
 
-      - name: Check if version exists in package.json
+      - name: Check if tag already exists
         run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
-          if [ "$CURRENT_VERSION" != "${{ github.event.inputs.version }}" ]; then
-            echo "::error::Version in package.json ($CURRENT_VERSION) doesn't match input version (${{ github.event.inputs.version }})"
-            echo "Please run 'npm run release:patch/minor/major' first to update the version"
+          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "::error::Tag v${{ steps.version.outputs.version }} already exists!"
+            echo "::error::If you want to create a new release, bump the version first by running 'npm run release:patch/minor/major' locally and creating a PR."
             exit 1
           fi
 
@@ -54,32 +48,28 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${{ github.event.inputs.version }}" -m "Release v${{ github.event.inputs.version }}"
-          git push origin "v${{ github.event.inputs.version }}"
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
 
       - name: Extract latest changelog entry
         id: changelog
         run: |
-          if [ -f "CHANGELOG.md" ]; then
-            CHANGELOG=$(awk '/^## \[/{if(++n==1) flag=1; else flag=0} flag' CHANGELOG.md)
-            echo "changelog<<EOF" >> $GITHUB_OUTPUT
-            echo "$CHANGELOG" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-          else
-            echo "changelog=Release v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-          fi
+          CHANGELOG=$(awk '/^## \[/{if(++n==1) flag=1; else flag=0} flag' CHANGELOG.md)
+          echo "changelog<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          tag: v${{ github.event.inputs.version }}
-          name: Release v${{ github.event.inputs.version }}
+          tag: v${{ steps.version.outputs.version }}
+          name: Release v${{ steps.version.outputs.version }}
           body: |
             ${{ steps.changelog.outputs.changelog }}
 
             ---
 
-            **Manually released version ${{ github.event.inputs.version }}**
+            **Manually released via GitHub Actions**
           artifacts: './module.json,./module.zip'
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
@@ -94,9 +84,9 @@ jobs:
               "id": "dorman-lakelys-npc-generator",
               "dry-run": false,
               "release": {
-                "version": "${{ github.event.inputs.version }}",
-                "manifest": "https://github.com/${{ github.repository }}/releases/download/v${{ github.event.inputs.version }}/module.json",
-                "notes": "https://github.com/${{ github.repository }}/releases/tag/v${{ github.event.inputs.version }}",
+                "version": "${{ steps.version.outputs.version }}",
+                "manifest": "https://github.com/${{ github.repository }}/releases/download/v${{ steps.version.outputs.version }}/module.json",
+                "notes": "https://github.com/${{ github.repository }}/releases/tag/v${{ steps.version.outputs.version }}",
                 "compatibility": {
                   "minimum": "11",
                   "verified": "13"

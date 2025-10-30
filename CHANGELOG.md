@@ -30,7 +30,7 @@ All notable changes to this project will be documented in this file.
 - Update src/utils/crCalculations.ts
 - Replace personality pills with proper multi-select dropdown
 - Expand species dropdown with 24 new humanoid creatures
-- enhancement: cleans up the prompts a bit
+- enhancement: Cleaned up the prompts a bit
 
 
 ## [1.1.1] - 2025-10-25

@@ -3,6 +3,7 @@ import { NPCGenerator } from './generator/ExistentialNPCGenerator.js';
 import { registerSettings } from './settings/ModuleSettings.js';
 import { NPCGeneratorUI } from './ui/ExistentialNPCGeneratorUI.js';
 import packageInfo from '../package.json';
+import buildInfo from '../build-info.json';
 
 // Module constants
 const MODULE_ID = 'dorman-lakelys-npc-generator';
@@ -11,9 +12,10 @@ const MODULE_ID = 'dorman-lakelys-npc-generator';
 Hooks.once('init', async () => {
   // Module initialization banner
   console.log(
-    "%c⚔️ Dorman Lakely's NPC Generator %cv" + packageInfo.version,
-    'color: #d32f2f; font-weight: bold; font-size: 20px;',
-    'color: #f44336; font-weight: normal; font-size: 14px;'
+    "%c⚔️ Dorman Lakely's NPC Generator %cv" + packageInfo.version + " %c(build " + buildInfo.buildNumber + ")",
+    'color: #d32f2f; font-weight: bold; font-size: 16px;',
+    'color: #ff9800; font-weight: bold; font-size: 14px;',
+    'color: #ffeb3b; font-weight: normal; font-size: 12px;'
   );
 
   // Register module settings
@@ -30,7 +32,7 @@ Hooks.once('init', async () => {
 Hooks.once('ready', async () => {
   console.log(
     "%c⚔️ Dorman Lakely's NPC Generator %c✓ Ready!",
-    'color: #d32f2f; font-weight: bold; font-size: 20px;',
+    'color: #d32f2f; font-weight: bold; font-size: 16px;',
     'color: #4caf50; font-weight: bold; font-size: 14px;'
   );
 });
@@ -38,9 +40,4 @@ Hooks.once('ready', async () => {
 // Re-add button every time the actors directory renders
 Hooks.on('renderActorDirectory', async (_app: any, _html: any) => {
   NPCGeneratorUI.addGeneratorButton();
-});
-
-// Handle canvas ready for any canvas-specific functionality
-Hooks.once('canvasReady', async () => {
-  console.log(`Dorman Lakely's NPC Gen | Canvas ready`);
 });

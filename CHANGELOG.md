@@ -20,7 +20,7 @@ All notable changes to this project will be documented in this file.
 - refactor compendium actor creation to avoid embedded document issues
 
 ### Changed
-- quality of life fixes
+- Quality of life fixes
 - Simplify startup console messages
 - bump version to 1.1.0
 

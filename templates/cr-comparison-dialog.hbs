@@ -1,0 +1,50 @@
+<div class="cr-comparison-content">
+  <p class="notification info">
+    {{localize "NPCGEN.CRComparisonIntro" name=actorName}}
+  </p>
+
+  <div class="form-group stacked">
+    <div class="cr-values-grid">
+      <div class="form-fields">
+        <label>{{localize "NPCGEN.TargetCR"}}</label>
+        <div class="cr-display target">{{targetCR}}</div>
+        <p class="hint">{{localize "NPCGEN.TargetCRDesc"}}</p>
+      </div>
+
+      <div class="form-fields">
+        <label>{{localize "NPCGEN.CalculatedCR"}}</label>
+        <div class="cr-display calculated {{#if isHigher}}higher{{else}}lower{{/if}}">{{calculatedCR}}</div>
+        <p class="hint">
+          {{localize "NPCGEN.CalculatedCRDesc"}} {{crDiff}} {{localize "NPCGEN.CRLevels"}} {{direction}}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-group">
+    <label>{{localize "NPCGEN.CRBreakdown"}}</label>
+    <div class="form-fields">
+      <div class="breakdown-row">
+        <label>{{localize "NPCGEN.DefensiveCR"}}</label>
+        <span class="value">{{defensiveCR}}</span>
+      </div>
+      <div class="breakdown-row">
+        <label>{{localize "NPCGEN.OffensiveCR"}}</label>
+        <span class="value">{{offensiveCR}}</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="hint">
+    {{localize "NPCGEN.CRComparisonHelp"}}
+  </p>
+
+  <footer class="form-footer flexrow">
+    {{#each buttons}}
+      <button type="{{type}}" data-action="{{action}}" class="{{css}}">
+        <i class="{{icon}}"></i>
+        {{label}}
+      </button>
+    {{/each}}
+  </footer>
+</div>

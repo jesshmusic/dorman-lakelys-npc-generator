@@ -101,7 +101,10 @@ export function mockFoundry() {
 
   // Mock Blob and File for image handling
   (global as any).Blob = class MockBlob {
-    constructor(public parts: any[], public options?: any) {}
+    constructor(
+      public parts: any[],
+      public options?: any
+    ) {}
   };
 
   (global as any).File = class MockFile extends (global as any).Blob {

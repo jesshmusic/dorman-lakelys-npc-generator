@@ -4,6 +4,12 @@ import incrementBuild from './vite-plugin-increment-build.mjs';
 
 export default defineConfig({
   plugins: [incrementBuild()],
+  server: {
+    watch: {
+      // Exclude build-info.json from watch to prevent infinite rebuild loop
+      ignored: ['**/build-info.json']
+    }
+  },
   build: {
     outDir: 'scripts',
     emptyOutDir: true,

@@ -568,6 +568,153 @@ const value = game.settings.get('dorman-lakelys-npc-generator', 'settingName') a
 await game.settings.set('dorman-lakelys-npc-generator', 'settingName', newValue);
 ```
 
+## CR Calculator Integration
+
+This module has optional integration with the CR Calculator module (`fvtt-challenge-calculator`). When installed, the CR Calculator automatically validates generated NPCs and optionally adjusts their CR based on actual stats, abilities, and equipment.
+
+### Detecting CR Calculator Availability
+
+Before using the CR Calculator API, check if it's installed and active:
+
+```typescript
+const crCalcModule = game.modules?.get('fvtt-challenge-calculator');
+const crCalcAPI = crCalcModule?.active ? crCalcModule.api : null;
+
+if (crCalcAPI) {
+  // CR Calculator is available - use the API
+} else {
+  // CR Calculator not available - fall back to default behavior
+}
+```
+
+### CR Calculator API
+
+The CR Calculator exposes a public API with the following interface:
+
+```typescript
+interface CRCalculatorAPI {
+  // Calculate CR for an actor and optionally update the actor's CR
+  calculateCRForActor(actor: Actor, updateActor: boolean): Promise<CRCalculationResult>;
+
+  // Array of all challenge rating definitions
+  challengeRatings: ChallengeRating[];
+
+  // Database of all monster features by name
+  monsterFeatures: Record<string, MonsterFeature>;
+
+  // Array of all monster feature names
+  monsterFeatureNames: string[];
+}
+
+interface CRCalculationResult {
+  calculatedCR: number; // Final calculated CR
+  defensiveCR: number; // CR based on HP, AC, and defensive abilities
+  offensiveCR: number; // CR based on DPR and attack bonus
+  // ... additional calculation details
+}
+```
+
+### Post-Creation CR Validation Flow
+
+After creating an NPC actor, the integration follows this flow:
+
+1. **Calculate Actual CR**: Calls `calculateCRForActor(actor, false)` to get the calculated CR without updating the actor
+2. **Compare CRs**: Compares calculated CR to the target CR that was requested
+3. **Handle Difference**:
+   - **Significant difference (>1 CR)**: Shows `CRComparisonDialog` to let user choose which CR to use
+   - **Small difference (≤1 CR)**: Auto-updates to calculated CR with notification
+   - **No difference**: Proceeds normally
+4. **Graceful Fallback**: If CR Calculator is unavailable or errors occur, continues with target CR
+
+### Using CR Comparison Dialog
+
+The `CRComparisonDialog` is a Promise-based dialog that lets users choose between target and calculated CR:
+
+```typescript
+const choice = await CRComparisonDialog.show(
+  targetCR, // The CR that was requested
+  calculatedCR, // The CR based on actual stats
+  defensiveCR, // Defensive CR component
+  offensiveCR, // Offensive CR component
+  actorName // Name of the NPC for display
+);
+
+if (choice === 'calculated') {
+  // User chose to use the calculated CR
+  await actor.update({ 'system.details.cr': calculatedCR });
+  ui.notifications?.info(`Updated to calculated CR ${calculatedCR}`);
+} else if (choice === 'target') {
+  // User chose to keep the target CR
+  ui.notifications?.info(`Kept target CR ${targetCR}`);
+} else {
+  // User cancelled (choice is null)
+  // Keep original CR without notification
+}
+```
+
+### Example: Complete CR Validation Implementation
+
+This example from `ExistentialNPCGeneratorUI.ts` shows the complete validation flow:
+
+```typescript
+if (actor) {
+  // Check if CR Calculator is available
+  const crCalcModule = game.modules?.get('fvtt-challenge-calculator');
+  const crCalcAPI = crCalcModule?.active ? crCalcModule.api : null;
+
+  if (crCalcAPI) {
+    try {
+      // Calculate actual CR using CR Calculator
+      const result = await crCalcAPI.calculateCRForActor(actor, false);
+      const targetCR = parseCR(npc.challengeRating);
+      const crDifference = Math.abs(result.calculatedCR - targetCR);
+
+      if (crDifference > 1) {
+        // Significant difference - let user choose
+        const choice = await CRComparisonDialog.show(
+          targetCR,
+          result.calculatedCR,
+          result.defensiveCR,
+          result.offensiveCR,
+          npc.name
+        );
+
+        if (choice === 'calculated') {
+          await actor.update({ 'system.details.cr': result.calculatedCR });
+          ui.notifications?.info(
+            `Created ${npc.name} with calculated CR ${result.calculatedCR} (was ${targetCR})`
+          );
+        } else if (choice === 'target') {
+          ui.notifications?.info(`Created ${npc.name} with target CR ${targetCR}`);
+        }
+      } else if (crDifference > 0) {
+        // Small difference - auto-update
+        await actor.update({ 'system.details.cr': result.calculatedCR });
+        ui.notifications?.info(
+          `Created ${npc.name}: CR adjusted ${targetCR} → ${result.calculatedCR}`
+        );
+      } else {
+        // No difference
+        ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating})`);
+      }
+    } catch (error) {
+      // Error during calculation - fall back to target CR
+      console.warn('Failed to validate CR with CR Calculator:', error);
+      ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating})`);
+    }
+  } else {
+    // CR Calculator not available
+    ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating})`);
+  }
+
+  actor.sheet?.render(true);
+}
+```
+
+### Future Enhancement: Monster Feature Selection
+
+A planned Phase 2 enhancement will use the CR Calculator's `monsterFeatures` database to automatically add CR-appropriate monster features during NPC generation. This will leverage the weighted feature selection system to ensure NPCs have abilities that match their challenge rating.
+
 ## Common Patterns
 
 ### Safe Compendium Access

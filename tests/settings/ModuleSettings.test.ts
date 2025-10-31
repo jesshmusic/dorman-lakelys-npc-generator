@@ -137,8 +137,8 @@ describe('ModuleSettings', () => {
       const mockRegister = (game.settings as any).register;
 
       // enableAI, openaiApiKey, openaiModel, portraitArtStyle,
-      // nameTemperature, bioTemperature, portraitTemperature
-      expect(mockRegister).toHaveBeenCalledTimes(7);
+      // nameTemperature, bioTemperature, portraitTemperature, debugMode
+      expect(mockRegister).toHaveBeenCalledTimes(8);
     });
 
     it('should handle missing game.settings gracefully', () => {

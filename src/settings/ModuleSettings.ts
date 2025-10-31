@@ -95,4 +95,15 @@ export function registerSettings(): void {
     },
     default: 0.9
   });
+
+  // Debug Mode
+  (game.settings as any)?.register(MODULE_ID, 'debugMode', {
+    name: 'Debug Mode',
+    hint: 'Enable debug mode to show a "Random Fill" button in the NPC generator for testing purposes.',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: false,
+    requiresReload: true
+  });
 }

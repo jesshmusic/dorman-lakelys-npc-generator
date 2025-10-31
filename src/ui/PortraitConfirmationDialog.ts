@@ -101,7 +101,8 @@ export class PortraitConfirmationDialog {
 
     // Generate initial prompt
     const apiKey = ((game.settings as any)?.get(MODULE_ID, 'openaiApiKey') as string) || '';
-    const model = ((game.settings as any)?.get(MODULE_ID, 'openaiModel') as string) || 'gpt-4o-mini';
+    const model =
+      ((game.settings as any)?.get(MODULE_ID, 'openaiModel') as string) || 'gpt-4o-mini';
     const provider = new OpenAIProvider(apiKey, model);
 
     return new Promise(resolve => {
@@ -303,7 +304,9 @@ export class PortraitConfirmationDialog {
       const updateDialog = (errorMsg?: string) => {
         if (dialogRef) {
           // Save current prompt value before re-rendering
-          const promptTextarea = dialogRef.element.find('#portrait-prompt')[0] as HTMLTextAreaElement;
+          const promptTextarea = dialogRef.element.find(
+            '#portrait-prompt'
+          )[0] as HTMLTextAreaElement;
           if (promptTextarea) {
             currentPrompt = promptTextarea.value;
           }

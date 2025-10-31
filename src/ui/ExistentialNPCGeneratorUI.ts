@@ -2,6 +2,7 @@
 import { NPCGenerator, NPC } from '../generator/ExistentialNPCGenerator.js';
 import { AIService, AIGenerationRequest } from '../services/AIService.js';
 import { PortraitConfirmationDialog } from './PortraitConfirmationDialog.js';
+import { CRComparisonDialog } from './CRComparisonDialog.js';
 import { parseCR } from '../utils/crCalculations.js';
 
 const MODULE_ID = 'dorman-lakelys-npc-generator';
@@ -26,7 +27,8 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
     },
     actions: {
       create: NPCGeneratorDialog.onCreateNPC,
-      cancel: NPCGeneratorDialog.onCancel
+      cancel: NPCGeneratorDialog.onCancel,
+      debugFill: NPCGeneratorDialog.onDebugFill
     }
   };
 
@@ -48,6 +50,9 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
     // Check if AI is enabled
     const aiEnabled = ((game.settings as any)?.get(MODULE_ID, 'enableAI') as boolean) || false;
 
+    // Check if debug mode is enabled
+    const debugMode = ((game.settings as any)?.get(MODULE_ID, 'debugMode') as boolean) || false;
+
     return {
       species: NPCGenerator.SPECIES,
       flavors: NPCGenerator.FLAVORS,
@@ -56,7 +61,8 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
       alignments: NPCGenerator.ALIGNMENTS,
       personalities: NPCGenerator.PERSONALITIES,
       folders,
-      aiEnabled
+      aiEnabled,
+      debugMode
     };
   }
 
@@ -458,6 +464,126 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
     // @ts-expect-error - close() exists at runtime but not in types
     this.close();
   }
+
+  static async onDebugFill(_event: Event, target: HTMLElement) {
+    const form = target.closest('form');
+    if (!form) return;
+
+    // Helper function to get random item from array
+    const randomItem = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
+
+    // Helper function to get random items (1-3) from array
+    const randomItems = (arr: string[], min = 1, max = 3) => {
+      const count = Math.floor(Math.random() * (max - min + 1)) + min;
+      const shuffled = [...arr].sort(() => 0.5 - Math.random());
+      return shuffled.slice(0, count);
+    };
+
+    // Fill Species
+    const speciesSelect = form.querySelector('#npc-species') as HTMLSelectElement;
+    if (speciesSelect) {
+      speciesSelect.value = randomItem(NPCGenerator.SPECIES);
+    }
+
+    // Fill Gender (optional field)
+    const genderSelect = form.querySelector('#npc-gender') as HTMLSelectElement;
+    if (genderSelect) {
+      // 80% chance to fill, 20% chance to leave empty
+      if (Math.random() > 0.2) {
+        genderSelect.value = randomItem(NPCGenerator.GENDERS);
+      }
+    }
+
+    // Fill Flavor (optional field)
+    const flavorSelect = form.querySelector('#npc-flavor') as HTMLSelectElement;
+    if (flavorSelect) {
+      // 60% chance to fill, 40% chance to leave empty
+      if (Math.random() > 0.4) {
+        flavorSelect.value = randomItem(NPCGenerator.FLAVORS);
+      }
+    }
+
+    // Fill Role
+    const roleSelect = form.querySelector('#npc-role') as HTMLSelectElement;
+    if (roleSelect) {
+      roleSelect.value = randomItem(NPCGenerator.ROLES);
+    }
+
+    // Fill Name
+    const nameInput = form.querySelector('#npc-name') as HTMLInputElement;
+    if (nameInput) {
+      // Generate a simple random name
+      const firstNames = [
+        'Aldric',
+        'Brenna',
+        'Cedric',
+        'Diana',
+        'Erik',
+        'Fiona',
+        'Gareth',
+        'Helena',
+        'Iris',
+        'Jonas'
+      ];
+      const lastNames = [
+        'Stoneheart',
+        'Brightwood',
+        'Shadowbane',
+        'Ironforge',
+        'Swiftwind',
+        'Goldleaf',
+        'Ravencrest',
+        'Moonwhisper'
+      ];
+      nameInput.value = `${randomItem(firstNames)} ${randomItem(lastNames)}`;
+    }
+
+    // Fill Alignment
+    const alignmentSelect = form.querySelector('#npc-alignment') as HTMLSelectElement;
+    if (alignmentSelect) {
+      alignmentSelect.value = randomItem(NPCGenerator.ALIGNMENTS);
+    }
+
+    // Fill CR (random between 0-30)
+    const crSlider = form.querySelector('#npc-cr') as HTMLInputElement;
+    const crValue = form.querySelector('#cr-value') as HTMLElement;
+    if (crSlider && crValue) {
+      const randomCR = Math.floor(Math.random() * 31);
+      crSlider.value = randomCR.toString();
+      crValue.textContent = NPCGenerator.CHALLENGE_RATINGS[randomCR];
+    }
+
+    // Fill Personality Traits (select 1-3 random traits)
+    const selectedPersonalities = randomItems(NPCGenerator.PERSONALITIES, 1, 3);
+    const personalityHidden = form.querySelector('#npc-personality') as HTMLInputElement;
+    const personalityContainer = form.querySelector('#personality-selected');
+    if (personalityHidden && personalityContainer) {
+      personalityHidden.value = selectedPersonalities.join(',');
+      personalityContainer.innerHTML = '';
+      selectedPersonalities.forEach(trait => {
+        const pill = document.createElement('span');
+        pill.className = 'selected-pill';
+        pill.dataset.value = trait;
+        pill.innerHTML = `${trait} <i class="fas fa-times"></i>`;
+        personalityContainer.appendChild(pill);
+      });
+    }
+
+    // Fill Biography with placeholder text
+    const bioTextarea = form.querySelector('#npc-biography') as HTMLTextAreaElement;
+    if (bioTextarea) {
+      const bios = [
+        'A wandering soul seeking purpose in a chaotic world.',
+        'Once a noble, now fallen from grace and seeking redemption.',
+        'A skilled artisan who left their past behind to forge a new destiny.',
+        'Haunted by memories of a war long past.',
+        'Driven by an insatiable curiosity about the arcane.'
+      ];
+      bioTextarea.value = randomItem(bios);
+    }
+
+    ui.notifications?.info('Debug: Form randomly filled!');
+  }
 }
 
 export class NPCGeneratorUI {
@@ -562,7 +688,7 @@ export class NPCGeneratorUI {
             type: {
               value: npc.species.toLowerCase()
             },
-            alignment: npc.alignment.toLowerCase().replace(' ', ''),
+            alignment: npc.alignment,
             biography: {
               value: npc.description
             },
@@ -591,7 +717,65 @@ export class NPCGeneratorUI {
       const actor = await Actor.create(actorData);
 
       if (actor) {
-        ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating})`);
+        // Check if CR Calculator is available for validation
+        const crCalcModule = game.modules?.get('fvtt-challenge-calculator');
+        const crCalcAPI = crCalcModule?.active ? crCalcModule.api : null;
+
+        if (crCalcAPI) {
+          try {
+            // Calculate actual CR using CR Calculator
+            const result = await crCalcAPI.calculateCRForActor(actor, false);
+            const targetCR = parseCR(npc.challengeRating);
+            const crDifference = Math.abs(result.calculatedCR - targetCR);
+
+            // If difference is significant (>1 CR), show comparison dialog
+            if (crDifference > 1) {
+              const choice = await CRComparisonDialog.show(
+                targetCR,
+                result.calculatedCR,
+                result.defensiveCR,
+                result.offensiveCR,
+                npc.name
+              );
+
+              if (choice === 'calculated') {
+                // Update actor with calculated CR
+                await actor.update({
+                  'system.details.cr': result.calculatedCR
+                });
+                ui.notifications?.info(
+                  `Created ${npc.name} with calculated CR ${result.calculatedCR} (was ${targetCR})`
+                );
+              } else if (choice === 'target') {
+                // Keep target CR
+                ui.notifications?.info(
+                  `Created ${npc.name} with target CR ${targetCR} (calculated CR was ${result.calculatedCR})`
+                );
+              } else {
+                // User cancelled, keep target CR
+                ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating})`);
+              }
+            } else if (crDifference > 0) {
+              // Small difference, auto-update with notification
+              await actor.update({
+                'system.details.cr': result.calculatedCR
+              });
+              ui.notifications?.info(
+                `Created ${npc.name}: CR adjusted ${targetCR} → ${result.calculatedCR}`
+              );
+            } else {
+              // CRs match
+              ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating})`);
+            }
+          } catch (error) {
+            console.warn('Failed to validate CR with CR Calculator:', error);
+            ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating})`);
+          }
+        } else {
+          // CR Calculator not available
+          ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating})`);
+        }
+
         actor.sheet?.render(true);
       }
     } catch (error) {

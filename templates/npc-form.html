@@ -153,6 +153,15 @@
         </div>
     </div>
 
+    {{#if debugMode}}
+    <!-- Debug Mode: Random Fill Button -->
+    <div class="form-group debug-section">
+        <button type="button" data-action="debugFill" class="debug-fill-button">
+            <i class="fas fa-flask"></i> {{localize "dorman-lakelys-npc-generator.ui.debugFill"}}
+        </button>
+    </div>
+    {{/if}}
+
     <footer class="form-footer flexrow">
         <button type="button" data-action="create" class="bright">
             <i class="fas fa-check"></i> Create NPC

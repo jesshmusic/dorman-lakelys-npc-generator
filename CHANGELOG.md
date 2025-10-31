@@ -5,11 +5,13 @@ All notable changes to this project will be documented in this file.
 ## [1.2.4] - 2025-10-31
 
 ### Fixed
+
 - Improve Foundry API token handling in release workflows
 
 ## [1.2.3] - 2025-10-30
 
 ### Added
+
 - Simplified portrait prompt somewhat
 - chore: add release script for automated version bumping
 - Add configurable temperature/randomness settings for AI generation
@@ -20,23 +22,25 @@ All notable changes to this project will be documented in this file.
 - add compendium destination options for NPC creation
 
 ### Fixed
+
 - Release v1.2.0: Improve ability score generation and fix image rendering
 - Fix DALL-E image generation to handle base64 responses
 - refactor compendium actor creation to avoid embedded document issues
 
 ### Changed
+
 - Quality of life fixes
 - Simplify startup console messages
 - bump version to 1.1.0
 
 ### Other
+
 - Bump version to 1.2.2
 - Update src/utils/crCalculations.ts
 - Update src/utils/crCalculations.ts
 - Replace personality pills with proper multi-select dropdown
 - Expand species dropdown with 24 new humanoid creatures
 - enhancement: Cleaned up the prompts a bit
-
 
 ## [1.1.1] - 2025-10-25
 

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.4] - 2025-10-31
+
+### Fixed
+- Improve Foundry API token handling in release workflows
+
 ## [1.2.3] - 2025-10-30
 
 ### Added

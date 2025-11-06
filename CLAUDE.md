@@ -25,14 +25,23 @@ This document contains technical notes, patterns, and conventions for working on
 src/
 ├── main.ts                          # Module entry point, hooks
 ├── ui/
-│   └── ExistentialNPCGeneratorUI.ts # ApplicationV2 dialog & UI logic
+│   ├── ExistentialNPCGeneratorUI.ts # ApplicationV2 dialog & UI logic
+│   ├── CRComparisonDialog.ts        # CR validation dialog
+│   └── PortraitConfirmationDialog.ts # AI portrait generation dialog
 ├── generator/
 │   └── ExistentialNPCGenerator.ts   # Core NPC generation logic
+├── services/
+│   └── AIService.ts                 # OpenAI integration for AI features
 ├── utils/
 │   ├── crCalculations.ts            # CR to stats calculations
 │   ├── classData.ts                 # Class features and skills data
-│   ├── equipmentData.ts             # Equipment pools by CR
-│   └── spellData.ts                 # Spell selections by class/level
+│   ├── equipmentData.ts             # Equipment pools by CR (legacy)
+│   ├── spellData.ts                 # Spell selections by class/level
+│   ├── templateData.ts              # Role-to-template mappings (v1.3.1+)
+│   ├── templateScaling.ts           # Template CR scaling logic (v1.3.1+)
+│   ├── damageScaling.ts             # Damage dice scaling utilities (v1.3.1+)
+│   ├── actorParsing.ts              # Actor data parsing utilities
+│   └── ImageService.ts              # Image generation and management
 ├── settings/
 │   └── ModuleSettings.ts            # Module settings registration
 └── types/
@@ -137,13 +146,129 @@ class NPCGeneratorDialog extends HandlebarsApplicationMixin(ApplicationV2) {
 
 ### NPC Generation Flow
 
+**Modern Template-Based Generation (v1.3.1+):**
+
 1. **User Input** → Dialog collects name, description, species, alignment, CR, class
-2. **Stat Generation** → CR determines ability scores, HP, AC, saves, skills
-3. **Equipment Selection** → CR-appropriate weapons and armor from equipment pools
-4. **Feature Addition** → CR-based monster features (Keen Senses, Multiattack, etc.)
-5. **Class Features** → Level-appropriate class features from compendium
-6. **Spell Selection** → For spellcasting classes, appropriate spell levels
-7. **Actor Creation** → Creates actor in world, folder, or compendium
+2. **Template Detection** → System searches compendiums for appropriate template actor
+   - Checks D&D Modern Content Compendium (if available)
+   - Falls back to dnd5e.monsters (core SRD)
+   - Uses role-to-category mapping system
+3. **Template Loading** → Loads template actor based on role
+   - Primary template (e.g., "Assassin" for Assassin role)
+   - Fallback template (e.g., "Bandit" for SKIRMISHER category)
+   - Last resort: "Commoner" or "Guard"
+4. **CR Scaling** → Template scaled to target CR
+   - Ability scores recalculated
+   - HP/AC scaled to CR table values
+   - Attack bonuses scaled
+   - **Damage dice scaled** to match CR damage range
+   - Save DCs scaled
+5. **Equipment Augmentation** → Role-appropriate equipment added
+6. **Feature Preservation** → Important features kept from template
+   - Multiattack, Assassinate, Sneak Attack, etc.
+7. **Actor Creation** → Creates actor with merged data
+8. **CR Validation** → CR Calculator validates (if available)
+
+### Template-Based Generation System
+
+The module uses a category-based template system to generate more realistic NPCs with proper action economy and features.
+
+#### Role-to-Template Mapping
+
+Located in `src/utils/templateData.ts`:
+
+```typescript
+export const TEMPLATE_CATEGORIES: TemplateMapping[] = [
+  {
+    category: 'SKIRMISHER',
+    primaryTemplate: 'Assassin',
+    fallbackTemplate: 'Bandit',
+    preserveFeatures: ['Assassinate', 'Sneak Attack', 'Cunning Action'],
+    roles: ['Rogue', 'Assassin', 'Spy', 'Thief', 'Smuggler', 'Street Urchin']
+  },
+  {
+    category: 'MARTIAL_COMBATANT',
+    primaryTemplate: 'Veteran',
+    fallbackTemplate: 'Guard',
+    preserveFeatures: ['Multiattack', 'Parry'],
+    roles: ['Fighter', 'Guard Captain', 'City Guard', 'Mercenary']
+  }
+  // ... 10 more categories covering all 67 roles
+];
+```
+
+**Template Categories:**
+
+- MARTIAL_COMBATANT (Fighter, Guard) → Veteran/Guard
+- SKIRMISHER (Rogue, Assassin) → Assassin/Bandit
+- ARCANE_CASTER (Wizard, Sorcerer) → Mage
+- DIVINE_CASTER (Cleric, Priest) → Priest/Acolyte
+- SUPPORT_PERFORMER (Bard, Entertainer) → Noble
+- NOBLE_AUTHORITY (Noble, Diplomat) → Noble/Knight
+- SKILLED_ARTISAN (Blacksmith, Jeweler) → Commoner
+- MERCHANT_SERVICE (Merchant, Innkeeper) → Commoner
+- SCHOLARLY (Scholar, Sage) → Acolyte
+- COMMON_FOLK (Farmer, Beggar) → Commoner
+- ADVENTURER_SPECIALIST (Pirate, Bandit) → Bandit Captain
+
+#### Damage Scaling
+
+Located in `src/utils/damageScaling.ts`:
+
+```typescript
+// Parse damage formula
+const formula = parseDamageFormula('2d6+3 slashing');
+// { count: 2, dieSize: 6, bonus: 3, type: "slashing" }
+
+// Scale to target CR
+const scaled = scaleDamageForCR('2d6+3', '9', abilityMod);
+// Returns "4d8+5" for CR 9 (target damage ~60)
+
+// Scale all damage parts (multi-damage attacks)
+const parts = [
+  ['2d6+3', 'piercing'],
+  ['1d6', 'poison']
+];
+const scaledParts = scaleDamageParts(parts, '9', abilityMod);
+// [["4d8+5", "piercing"], ["2d6", "poison"]]
+```
+
+**Scaling Algorithm:**
+
+1. Parse damage formula (dice count, size, bonus, type)
+2. Get target damage from CR table (dmg range midpoint)
+3. Find best die size & count to match target
+4. Preserve damage type and special effects
+5. Apply ability modifier appropriately
+
+#### Template Scaling
+
+Located in `src/utils/templateScaling.ts`:
+
+```typescript
+// Scale template actor to target CR
+const scaledData = scaleTemplateActorToCR(templateData, npc, role);
+```
+
+**What Gets Scaled:**
+
+- ✅ Ability scores (recalculated from CR + species + role)
+- ✅ HP (CR table hpMultiplier)
+- ✅ AC (CR table baseAC)
+- ✅ Attack bonuses (CR table attackBonus)
+- ✅ Damage dice (scaled to CR damage range)
+- ✅ Save DCs (CR table saveDC)
+- ✅ Proficiency bonus (CR table profBonus)
+- ✅ Skills (recalculated with new proficiency)
+
+**What Gets Preserved:**
+
+- ✅ Feature names & descriptions
+- ✅ Special actions (Multiattack, Assassinate, etc.)
+- ✅ Action economy structure
+- ✅ Sensory abilities (Darkvision, Keen Senses)
+- ✅ Special movement modes
+- ✅ Spellcasting structure (but DCs scaled)
 
 ### CR to Stats Calculations
 

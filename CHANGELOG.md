@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2025-11-06
+
+### Added
+
+- **Template-based NPC generation system** - Complete rewrite of NPC generation using actor templates from compendiums
+- New role-to-template category mapping system covering all 67 roles
+- Intelligent template fallback logic (primary → category fallback → Commoner/Guard)
+- Damage dice scaling system that matches CR damage ranges
+- Support for D&D Modern Content Compendium (optional) with fallback to core SRD
+- Three new utility modules:
+  - `templateData.ts` - Role-to-template mappings for 11 categories
+  - `damageScaling.ts` - Damage formula parsing and CR-based scaling
+  - `templateScaling.ts` - Complete template actor CR scaling logic
+
+### Changed
+
+- NPCs now generated from actual D&D 5e monster statblocks (Assassin, Guard, Mage, etc.)
+- Attack bonuses, damage dice, save DCs all scaled to match target CR
+- Features like Multiattack, Assassinate, Sneak Attack preserved from templates
+- Equipment system now augments template features instead of being primary source
+- All 67 roles now have proper template mappings (previously only 12 had equipment)
+
+### Fixed
+
+- Roles like Assassin, Spy, Merchant, Blacksmith now generate with appropriate features and actions
+- Damage scaling ensures Offensive CR calculates correctly for all roles
+- Template features provide proper action economy (bonus actions, reactions, etc.)
+
 ## [1.3.1] - 2025-11-06
 
 ### Fixed

@@ -3,7 +3,14 @@ import { NPCGenerator, NPC } from '../generator/ExistentialNPCGenerator.js';
 import { AIService, AIGenerationRequest } from '../services/AIService.js';
 import { PortraitConfirmationDialog } from './PortraitConfirmationDialog.js';
 import { CRComparisonDialog } from './CRComparisonDialog.js';
-import { parseCR } from '../utils/crCalculations.js';
+import { parseCR, getCRStats } from '../utils/crCalculations.js';
+import { getEquipmentForClass } from '../utils/equipmentData.js';
+import { getTemplateActorName } from '../utils/templateData.js';
+import {
+  scaleTemplateActorToCR,
+  addLanguagesToTemplate,
+  addCurrencyToTemplate
+} from '../utils/templateScaling.js';
 
 const MODULE_ID = 'dorman-lakelys-npc-generator';
 
@@ -453,8 +460,8 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
     // Generate NPC with CR-appropriate stats
     const npc = NPCGenerator.generateNPC(inputData);
 
-    // Create actor in world with personality traits
-    await NPCGeneratorUI.createSimpleActor(npc, personality, ideal, bond, folderId || null);
+    // Create actor from template with personality traits
+    await NPCGeneratorUI.createActorFromTemplate(npc, personality, ideal, bond, folderId || null);
 
     // @ts-expect-error - close() exists at runtime but not in types
     this.close();
@@ -622,7 +629,252 @@ export class NPCGeneratorUI {
   }
 
   /**
-   * Create a simple actor in world with personality traits
+   * Detect available actor compendiums for template loading
+   */
+  private static async detectAvailableCompendiums(): Promise<string[]> {
+    if (!game.packs) return [];
+
+    const available: string[] = [];
+
+    // Check for dnd5e.monsters (core SRD)
+    if (game.packs.get('dnd5e.monsters')) {
+      available.push('dnd5e.monsters');
+    }
+
+    // Check for D&D Modern Content or other actor compendiums
+    for (const pack of game.packs.values()) {
+      if (pack.documentName === 'Actor' && pack.collection !== 'dnd5e.monsters') {
+        available.push(pack.collection);
+      }
+    }
+
+    return available;
+  }
+
+  /**
+   * Find template actor in compendiums with fallback logic
+   */
+  private static async findTemplateActor(
+    templateName: string,
+    compendiums: string[]
+  ): Promise<any | null> {
+    if (!game.packs) return null;
+
+    for (const compendiumId of compendiums) {
+      const pack = game.packs.get(compendiumId);
+      if (!pack) continue;
+
+      try {
+        // Search for actor by name (case-insensitive)
+        const indexEntry = pack.index.find(
+          (entry: any) => entry.name.toLowerCase() === templateName.toLowerCase()
+        );
+
+        if (indexEntry) {
+          const actor = await pack.getDocument(indexEntry._id);
+          if (actor) {
+            console.log(`Found template actor "${templateName}" in ${compendiumId}`);
+            return actor;
+          }
+        }
+      } catch (error) {
+        console.warn(`Error searching ${compendiumId} for ${templateName}:`, error);
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Load template actor for role with fallback logic
+   */
+  private static async loadTemplateForRole(
+    role: string,
+    compendiums: string[]
+  ): Promise<any | null> {
+    // Try primary template first
+    const primaryTemplate = getTemplateActorName(role, true);
+    let template = await this.findTemplateActor(primaryTemplate, compendiums);
+
+    if (template) {
+      return template;
+    }
+
+    // Try fallback template
+    const fallbackTemplate = getTemplateActorName(role, false);
+    if (fallbackTemplate !== primaryTemplate) {
+      template = await this.findTemplateActor(fallbackTemplate, compendiums);
+      if (template) {
+        console.log(`Using fallback template "${fallbackTemplate}" for role "${role}"`);
+        return template;
+      }
+    }
+
+    // Last resort: try Commoner
+    if (primaryTemplate !== 'Commoner' && fallbackTemplate !== 'Commoner') {
+      template = await this.findTemplateActor('Commoner', compendiums);
+      if (template) {
+        console.warn(`Using Commoner template as last resort for role "${role}"`);
+        return template;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Create actor from template with CR scaling
+   */
+  static async createActorFromTemplate(
+    npc: NPC,
+    personality: string,
+    ideal: string,
+    bond: string,
+    folderId: string | null = null
+  ): Promise<void> {
+    try {
+      // 1. Detect available compendiums
+      const compendiums = await this.detectAvailableCompendiums();
+
+      if (compendiums.length === 0) {
+        ui.notifications?.warn('No actor compendiums found. Cannot create NPC from template.');
+        return;
+      }
+
+      // 2. Load template actor for role
+      const template = await this.loadTemplateForRole(npc.class, compendiums);
+
+      if (!template) {
+        ui.notifications?.error(
+          `Could not find template actor for role "${npc.class}". Please ensure dnd5e.monsters compendium is available.`
+        );
+        return;
+      }
+
+      // 3. Convert template to plain object for modification
+      const templateData = template.toObject();
+
+      // 4. Scale template to target CR and NPC specifications
+      const scaledData = scaleTemplateActorToCR(templateData, npc, npc.class);
+
+      // 5. Add NPC-specific data
+      scaledData.folder = folderId;
+      addLanguagesToTemplate(scaledData, npc.languages);
+      addCurrencyToTemplate(scaledData, npc.currency);
+
+      // 6. Add personality traits
+      const personalityHtml = personality ? `<li>${personality}</li>` : '';
+      const idealHtml = ideal ? `<li>${ideal}</li>` : '';
+      const bondHtml = bond ? `<li>${bond}</li>` : '';
+
+      if (!scaledData.system.details) {
+        scaledData.system.details = {};
+      }
+      scaledData.system.details.personality = personalityHtml;
+      scaledData.system.details.ideal = idealHtml;
+      scaledData.system.details.bond = bondHtml;
+
+      // 7. Add role-appropriate equipment
+      try {
+        const crValue = parseCR(npc.challengeRating);
+        const crStats = getCRStats(npc.challengeRating);
+        const equipment = getEquipmentForClass(npc.class, crValue);
+
+        // Load weapons
+        if (equipment.weapons.length > 0) {
+          const weaponItems = await this.loadEquipmentItems(equipment.weapons, crStats.attackBonus);
+          if (weaponItems.length > 0) {
+            scaledData.items = scaledData.items || [];
+            scaledData.items.push(...weaponItems);
+          }
+        }
+
+        // Load armor
+        if (equipment.armor.length > 0) {
+          const armorItems = await this.loadEquipmentItems(equipment.armor, 0);
+          if (armorItems.length > 0) {
+            scaledData.items = scaledData.items || [];
+            scaledData.items.push(...armorItems);
+          }
+        }
+      } catch (error) {
+        console.error('Error adding equipment:', error);
+      }
+
+      // 8. Create the actor
+      const actor = await Actor.create(scaledData);
+
+      if (actor) {
+        // Check if CR Calculator is available for validation
+        const crCalcModule = game.modules?.get('fvtt-challenge-calculator');
+        const crCalcAPI = crCalcModule?.active ? crCalcModule.api : null;
+
+        if (crCalcAPI) {
+          try {
+            // Calculate actual CR using CR Calculator
+            const result = await crCalcAPI.calculateCRForActor(actor, false);
+            const targetCR = parseCR(npc.challengeRating);
+            const crDifference = Math.abs(result.calculatedCR - targetCR);
+
+            // If difference is significant (>1 CR), show comparison dialog
+            if (crDifference > 1) {
+              const choice = await CRComparisonDialog.show(
+                targetCR,
+                result.calculatedCR,
+                result.defensiveCR,
+                result.offensiveCR,
+                npc.name
+              );
+
+              if (choice === 'calculated') {
+                // Update actor with calculated CR
+                await actor.update({
+                  'system.details.cr': result.calculatedCR
+                });
+                ui.notifications?.info(
+                  `Created ${npc.name} with calculated CR ${result.calculatedCR} (was ${targetCR})`
+                );
+              } else if (choice === 'target') {
+                // Keep target CR
+                ui.notifications?.info(
+                  `Created ${npc.name} with target CR ${targetCR} (calculated CR was ${result.calculatedCR})`
+                );
+              } else {
+                // User cancelled, keep target CR
+                ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating})`);
+              }
+            } else if (crDifference > 0) {
+              // Small difference, auto-update with notification
+              await actor.update({
+                'system.details.cr': result.calculatedCR
+              });
+              ui.notifications?.info(
+                `Created ${npc.name}: CR adjusted ${targetCR} → ${result.calculatedCR}`
+              );
+            } else {
+              // CRs match
+              ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating})`);
+            }
+          } catch (error) {
+            console.warn('Failed to validate CR with CR Calculator:', error);
+            ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating})`);
+          }
+        } else {
+          // CR Calculator not available
+          ui.notifications?.info(`Created NPC: ${npc.name} (CR ${npc.challengeRating})`);
+        }
+
+        actor.sheet?.render(true);
+      }
+    } catch (error) {
+      console.error("Dorman Lakely's NPC Gen | Error creating NPC:", error);
+      ui.notifications?.error('Failed to create NPC');
+    }
+  }
+
+  /**
+   * DEPRECATED: Create a simple actor in world with personality traits
+   * Kept for backward compatibility but no longer used
    */
   static async createSimpleActor(
     npc: NPC,
@@ -717,6 +969,34 @@ export class NPCGeneratorUI {
       const actor = await Actor.create(actorData);
 
       if (actor) {
+        // Add equipment to the actor
+        try {
+          const crValue = parseCR(npc.challengeRating);
+          const crStats = getCRStats(npc.challengeRating);
+          const equipment = getEquipmentForClass(npc.class, crValue);
+
+          // Load and add weapons
+          if (equipment.weapons.length > 0) {
+            const weaponItems = await this.loadEquipmentItems(
+              equipment.weapons,
+              crStats.attackBonus
+            );
+            if (weaponItems.length > 0) {
+              await actor.createEmbeddedDocuments('Item', weaponItems);
+            }
+          }
+
+          // Load and add armor
+          if (equipment.armor.length > 0) {
+            const armorItems = await this.loadEquipmentItems(equipment.armor, 0);
+            if (armorItems.length > 0) {
+              await actor.createEmbeddedDocuments('Item', armorItems);
+            }
+          }
+        } catch (error) {
+          console.error("Dorman Lakely's NPC Gen | Error adding equipment:", error);
+        }
+
         // Check if CR Calculator is available for validation
         const crCalcModule = game.modules?.get('fvtt-challenge-calculator');
         const crCalcAPI = crCalcModule?.active ? crCalcModule.api : null;
@@ -806,5 +1086,71 @@ export class NPCGeneratorUI {
       sur: 'wis'
     };
     return skillAbilityMap[skillKey] || 'wis';
+  }
+
+  /**
+   * Load items from the dnd5e.items compendium and configure attack bonuses
+   */
+  private static async loadEquipmentItems(
+    itemNames: string[],
+    attackBonus: number
+  ): Promise<any[]> {
+    if (!game.packs) {
+      console.warn('Game packs not available');
+      return [];
+    }
+
+    const pack = game.packs.get('dnd5e.items');
+    if (!pack) {
+      console.warn('dnd5e.items compendium not found');
+      return [];
+    }
+
+    const items: any[] = [];
+
+    for (const itemName of itemNames) {
+      try {
+        // Search for item in compendium index
+        const indexEntry = pack.index.find((i: any) => i.name === itemName);
+        if (!indexEntry) {
+          console.warn(`Item "${itemName}" not found in dnd5e.items`);
+          continue;
+        }
+
+        // Load the full item document
+        const item = await pack.getDocument(indexEntry._id);
+        if (!item) {
+          console.warn(`Failed to load item "${itemName}"`);
+          continue;
+        }
+
+        // Convert to plain object for modification
+        const itemData = item.toObject();
+
+        // Configure item as equipped
+        if (itemData.system && 'equipped' in itemData.system) {
+          itemData.system.equipped = true;
+        }
+
+        // Configure attack bonus for weapons
+        if (itemData.type === 'weapon' && itemData.system) {
+          // Set attack bonus override
+          if ('attack' in itemData.system && itemData.system.attack) {
+            itemData.system.attack.bonus = attackBonus.toString();
+          }
+
+          // Enable proficiency for the weapon
+          if ('proficient' in itemData.system) {
+            itemData.system.proficient = 1;
+          }
+        }
+
+        items.push(itemData);
+      } catch (error) {
+        console.error(`Error loading item "${itemName}":`, error);
+      }
+    }
+
+    return items;
   }
 }

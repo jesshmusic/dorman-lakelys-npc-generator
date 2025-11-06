@@ -13,3 +13,4 @@ scripts/*.d.ts
 /dorman-lakelys-npc-generator.lock
 coverage/
 .nyc_output/
+.idea

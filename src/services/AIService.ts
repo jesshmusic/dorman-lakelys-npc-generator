@@ -93,11 +93,31 @@ export abstract class AIProvider {
   private buildNamePrompt(context: any): string {
     const flavorContext = context.flavor ? `\n- Campaign Flavor: ${context.flavor}` : '';
     const genderContext = context.gender ? `\n- Gender: ${context.gender}` : '';
-    return `Generate 1 evocative, setting-agnostic name for a tabletop fantasy role-playing NPC with these characteristics:
-- Role: ${context.role || 'Fighter'}
-- Alignment: ${context.alignment || 'Neutral'}${genderContext}${flavorContext}
+    const speciesContext = context.species ? `\n- Species: ${context.species}` : '';
+    const personalityContext = context.personality ? `\n- Personality: ${context.personality}` : '';
 
-Provide ONLY the name—no extra text.`;
+    // Add randomization seed based on timestamp to encourage variety
+    const randomSeed = Date.now() % 1000;
+
+    return `Generate 1 unique, creative name for a tabletop fantasy role-playing NPC.
+
+Character Details:
+- Role: ${context.role || 'Fighter'}
+- Alignment: ${context.alignment || 'Neutral'}${speciesContext}${genderContext}${flavorContext}${personalityContext}
+
+IMPORTANT Instructions:
+• Create an ORIGINAL name - avoid common/generic fantasy names
+• Make it memorable and distinctive for this specific character
+• Consider the character's role, species, and personality when crafting the name
+• Avoid overused combinations like "Gareth Ironforge" or "Elara Moonwhisper"
+• Be creative and unexpected - think beyond typical patterns
+• Mix unusual consonants and vowel combinations for uniqueness
+${context.flavor ? `• Draw inspiration from ${context.flavor} themes and naming conventions` : '• Use diverse cultural naming patterns (Celtic, Norse, Arabic, Asian, etc.)'}
+${randomSeed % 3 === 0 ? '• Consider unconventional spellings or sound combinations' : ''}
+${randomSeed % 3 === 1 ? '• Try mixing elements from different cultural traditions' : ''}
+${randomSeed % 3 === 2 ? '• Create a name with an unusual rhythm or structure' : ''}
+
+Provide ONLY the final name—no explanations, no extra text.`;
   }
 
   private buildBiographyPrompt(context: any): string {
@@ -189,8 +209,16 @@ export class OpenAIProvider extends AIProvider {
       portrait: 'portraitTemperature'
     };
 
+    // Default temperatures per type (matching ModuleSettings.ts)
+    const defaultTemperatures = {
+      name: 1.0, // Higher for more variety in names
+      biography: 0.8,
+      portrait: 0.9
+    };
+
     const settingKey = settingMap[type];
-    const temperature = ((game.settings as any)?.get(MODULE_ID, settingKey) as number) || 0.8;
+    const temperature =
+      ((game.settings as any)?.get(MODULE_ID, settingKey) as number) || defaultTemperatures[type];
 
     console.log(
       `Dorman Lakely's NPC Gen | Using temperature ${temperature} for ${type} generation`

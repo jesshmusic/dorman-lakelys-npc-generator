@@ -56,7 +56,7 @@ export function registerSettings(): void {
   // Temperature/Randomness Settings
   (game.settings as any)?.register(MODULE_ID, 'nameTemperature', {
     name: 'Name Generation Randomness',
-    hint: 'Controls creativity for name generation (0.0 = consistent, 2.0 = very random). Higher values produce more varied and creative names.',
+    hint: 'Controls creativity/variety for name generation (0.0 = consistent, 2.0 = very random). Default 1.0 provides good variety. Increase to 1.3-1.5 if you notice repeated names.',
     scope: 'world',
     config: true,
     type: Number,

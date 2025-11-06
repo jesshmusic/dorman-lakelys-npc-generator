@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.1] - 2025-11-06
+
+### Fixed
+
+- Add equipment and weapons to generated NPCs with proper attack bonuses to fix Offensive CR calculation
+- Fix .claude/commands files to reference correct 'scripts/' directory instead of 'dist/'
+- Fix package.json lint scripts to only target src/ directory
+
+### Changed
+
+- NPCs now include CR-appropriate weapons and armor from dnd5e.items compendium
+- Weapons are automatically configured with attack bonuses based on target CR
+- Equipment is marked as equipped on creation for accurate AC and attack calculations
+
 ## [1.2.4] - 2025-10-31
 
 ### Fixed

@@ -3,7 +3,8 @@ import { NPCGenerator, NPC } from '../generator/ExistentialNPCGenerator.js';
 import { AIService, AIGenerationRequest } from '../services/AIService.js';
 import { PortraitConfirmationDialog } from './PortraitConfirmationDialog.js';
 import { CRComparisonDialog } from './CRComparisonDialog.js';
-import { parseCR } from '../utils/crCalculations.js';
+import { parseCR, getCRStats } from '../utils/crCalculations.js';
+import { getEquipmentForClass } from '../utils/equipmentData.js';
 
 const MODULE_ID = 'dorman-lakelys-npc-generator';
 
@@ -717,6 +718,34 @@ export class NPCGeneratorUI {
       const actor = await Actor.create(actorData);
 
       if (actor) {
+        // Add equipment to the actor
+        try {
+          const crValue = parseCR(npc.challengeRating);
+          const crStats = getCRStats(npc.challengeRating);
+          const equipment = getEquipmentForClass(npc.class, crValue);
+
+          // Load and add weapons
+          if (equipment.weapons.length > 0) {
+            const weaponItems = await this.loadEquipmentItems(
+              equipment.weapons,
+              crStats.attackBonus
+            );
+            if (weaponItems.length > 0) {
+              await actor.createEmbeddedDocuments('Item', weaponItems);
+            }
+          }
+
+          // Load and add armor
+          if (equipment.armor.length > 0) {
+            const armorItems = await this.loadEquipmentItems(equipment.armor, 0);
+            if (armorItems.length > 0) {
+              await actor.createEmbeddedDocuments('Item', armorItems);
+            }
+          }
+        } catch (error) {
+          console.error("Dorman Lakely's NPC Gen | Error adding equipment:", error);
+        }
+
         // Check if CR Calculator is available for validation
         const crCalcModule = game.modules?.get('fvtt-challenge-calculator');
         const crCalcAPI = crCalcModule?.active ? crCalcModule.api : null;
@@ -806,5 +835,71 @@ export class NPCGeneratorUI {
       sur: 'wis'
     };
     return skillAbilityMap[skillKey] || 'wis';
+  }
+
+  /**
+   * Load items from the dnd5e.items compendium and configure attack bonuses
+   */
+  private static async loadEquipmentItems(
+    itemNames: string[],
+    attackBonus: number
+  ): Promise<any[]> {
+    if (!game.packs) {
+      console.warn('Game packs not available');
+      return [];
+    }
+
+    const pack = game.packs.get('dnd5e.items');
+    if (!pack) {
+      console.warn('dnd5e.items compendium not found');
+      return [];
+    }
+
+    const items: any[] = [];
+
+    for (const itemName of itemNames) {
+      try {
+        // Search for item in compendium index
+        const indexEntry = pack.index.find((i: any) => i.name === itemName);
+        if (!indexEntry) {
+          console.warn(`Item "${itemName}" not found in dnd5e.items`);
+          continue;
+        }
+
+        // Load the full item document
+        const item = await pack.getDocument(indexEntry._id);
+        if (!item) {
+          console.warn(`Failed to load item "${itemName}"`);
+          continue;
+        }
+
+        // Convert to plain object for modification
+        const itemData = item.toObject();
+
+        // Configure item as equipped
+        if (itemData.system && 'equipped' in itemData.system) {
+          itemData.system.equipped = true;
+        }
+
+        // Configure attack bonus for weapons
+        if (itemData.type === 'weapon' && itemData.system) {
+          // Set attack bonus override
+          if ('attack' in itemData.system && itemData.system.attack) {
+            itemData.system.attack.bonus = attackBonus.toString();
+          }
+
+          // Enable proficiency for the weapon
+          if ('proficient' in itemData.system) {
+            itemData.system.proficient = 1;
+          }
+        }
+
+        items.push(itemData);
+      } catch (error) {
+        console.error(`Error loading item "${itemName}":`, error);
+      }
+    }
+
+    return items;
   }
 }

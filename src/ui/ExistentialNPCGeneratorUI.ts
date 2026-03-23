@@ -3,9 +3,10 @@ import { NPCGenerator, NPC } from '../generator/ExistentialNPCGenerator.js';
 import { AIService, AIGenerationRequest } from '../services/AIService.js';
 import { PortraitConfirmationDialog } from './PortraitConfirmationDialog.js';
 import { CRComparisonDialog } from './CRComparisonDialog.js';
-import { parseCR, getCRStats } from '../utils/crCalculations.js';
+import { parseCR, getCRStats, crToLevel } from '../utils/crCalculations.js';
 import { getEquipmentForClass } from '../utils/equipmentData.js';
-import { getTemplateActorName } from '../utils/templateData.js';
+import { getTemplateActorName, TEMPLATE_CATEGORIES } from '../utils/templateData.js';
+import { getSpellsForClass, SpellSelection } from '../utils/spellData.js';
 import {
   scaleTemplateActorToCR,
   addLanguagesToTemplate,
@@ -801,6 +802,34 @@ export class NPCGeneratorUI {
         console.error('Error adding equipment:', error);
       }
 
+      // 7b. Replace template spells with class-appropriate spells
+      try {
+        const spellcastingClass = this.getSpellcastingClassForRole(npc.class);
+        if (spellcastingClass) {
+          const level = crToLevel(npc.challengeRating);
+          const spellSelection = getSpellsForClass(spellcastingClass, level);
+          const spellNames = this.flattenSpellSelection(spellSelection);
+
+          if (spellNames.length > 0) {
+            // Remove existing spell items from template
+            scaledData.items = (scaledData.items || []).filter(
+              (item: any) => item.type !== 'spell'
+            );
+
+            // Load and add class-appropriate spells
+            const spellItems = await this.loadSpellItems(spellNames);
+            if (spellItems.length > 0) {
+              scaledData.items.push(...spellItems);
+              console.log(
+                `Dorman Lakely's NPC Gen | Added ${spellItems.length} ${spellcastingClass} spells for ${npc.name}`
+              );
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Dorman Lakely's NPC Gen | Error adding class spells:", error);
+      }
+
       // 8. Create the actor
       const actor = await Actor.create(scaledData);
 
@@ -1086,6 +1115,81 @@ export class NPCGeneratorUI {
       sur: 'wis'
     };
     return skillAbilityMap[skillKey] || 'wis';
+  }
+
+  /**
+   * Map a role to its spellcasting class, if applicable.
+   * Standard class names (Wizard, Cleric, etc.) map to themselves.
+   * Non-standard roles (Witch, Healer, etc.) map to their category's default class.
+   */
+  private static getSpellcastingClassForRole(role: string): string | null {
+    // Direct spellcasting classes
+    const directClasses = ['Bard', 'Cleric', 'Druid', 'Paladin', 'Ranger', 'Sorcerer', 'Warlock', 'Wizard'];
+    if (directClasses.includes(role)) return role;
+
+    // Map non-standard roles via template categories
+    const categoryToClass: Record<string, string> = {
+      ARCANE_CASTER: 'Wizard',
+      DIVINE_CASTER: 'Cleric',
+      SUPPORT_PERFORMER: 'Bard',
+    };
+
+    for (const category of TEMPLATE_CATEGORIES) {
+      if (category.roles.includes(role) && categoryToClass[category.category]) {
+        return categoryToClass[category.category];
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Load spells from the dnd5e.spells compendium by name
+   */
+  private static async loadSpellItems(spellNames: string[]): Promise<any[]> {
+    if (!game.packs || spellNames.length === 0) return [];
+
+    const pack = game.packs.get('dnd5e.spells');
+    if (!pack) {
+      console.warn("Dorman Lakely's NPC Gen | dnd5e.spells compendium not found");
+      return [];
+    }
+
+    const items: any[] = [];
+    for (const spellName of spellNames) {
+      try {
+        const indexEntry = pack.index.find((i: any) => i.name === spellName);
+        if (!indexEntry) {
+          console.warn(`Dorman Lakely's NPC Gen | Spell "${spellName}" not found in dnd5e.spells`);
+          continue;
+        }
+        const item = await pack.getDocument(indexEntry._id);
+        if (item) {
+          items.push(item.toObject());
+        }
+      } catch (error) {
+        console.error(`Dorman Lakely's NPC Gen | Error loading spell "${spellName}":`, error);
+      }
+    }
+    return items;
+  }
+
+  /**
+   * Flatten a SpellSelection into a single array of spell names
+   */
+  private static flattenSpellSelection(selection: SpellSelection): string[] {
+    return [
+      ...selection.cantrips,
+      ...selection.level1,
+      ...selection.level2,
+      ...selection.level3,
+      ...selection.level4,
+      ...selection.level5,
+      ...selection.level6,
+      ...selection.level7,
+      ...selection.level8,
+      ...selection.level9,
+    ];
   }
 
   /**

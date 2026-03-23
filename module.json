@@ -2,7 +2,7 @@
   "id": "dorman-lakelys-npc-generator",
   "title": "Dorman Lakely's NPC Generator",
   "description": "A FoundryVTT module for generating NPCs with depth and meaning.",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "authors": [
     {
       "name": "jesshmusic"

@@ -3,9 +3,10 @@ import { NPCGenerator, NPC } from '../generator/ExistentialNPCGenerator.js';
 import { AIService, AIGenerationRequest } from '../services/AIService.js';
 import { PortraitConfirmationDialog } from './PortraitConfirmationDialog.js';
 import { CRComparisonDialog } from './CRComparisonDialog.js';
-import { parseCR, getCRStats } from '../utils/crCalculations.js';
+import { parseCR, getCRStats, crToLevel } from '../utils/crCalculations.js';
 import { getEquipmentForClass } from '../utils/equipmentData.js';
-import { getTemplateActorName } from '../utils/templateData.js';
+import { getTemplateActorName, TEMPLATE_CATEGORIES } from '../utils/templateData.js';
+import { getSpellsForClass, SpellSelection } from '../utils/spellData.js';
 import {
   scaleTemplateActorToCR,
   addLanguagesToTemplate,
@@ -801,6 +802,38 @@ export class NPCGeneratorUI {
         console.error('Error adding equipment:', error);
       }
 
+      // 7b. Replace template spells with class-appropriate spells
+      try {
+        const spellcastingClass = this.getSpellcastingClassForRole(npc.class);
+        if (spellcastingClass) {
+          // Always remove template spells for casters to avoid wizard defaults
+          scaledData.items = (scaledData.items || []).filter(
+            (item: any) => item.type !== 'spell'
+          );
+
+          const level = crToLevel(npc.challengeRating);
+          const spellSelection = getSpellsForClass(spellcastingClass, level);
+          const spellNames = this.flattenSpellSelection(spellSelection);
+
+          if (spellNames.length > 0) {
+            // Load and add class-appropriate spells
+            const spellItems = await this.loadSpellItems(spellNames);
+            if (spellItems.length > 0) {
+              scaledData.items.push(...spellItems);
+              console.log(
+                `Dorman Lakely's NPC Gen | Added ${spellItems.length} ${spellcastingClass} spells for ${npc.name}`
+              );
+            } else {
+              console.warn(
+                `Dorman Lakely's NPC Gen | No spells could be loaded from compendium for ${spellcastingClass}`
+              );
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Dorman Lakely's NPC Gen | Error adding class spells:", error);
+      }
+
       // 8. Create the actor
       const actor = await Actor.create(scaledData);
 
@@ -1086,6 +1119,100 @@ export class NPCGeneratorUI {
       sur: 'wis'
     };
     return skillAbilityMap[skillKey] || 'wis';
+  }
+
+  /**
+   * Map a role to its spellcasting class, if applicable.
+   * Standard class names (Wizard, Cleric, etc.) map to themselves.
+   * Non-standard roles (Witch, Healer, etc.) map to their category's default class.
+   */
+  private static getSpellcastingClassForRole(role: string): string | null {
+    // Direct spellcasting classes
+    const directClasses = ['Bard', 'Cleric', 'Druid', 'Paladin', 'Ranger', 'Sorcerer', 'Warlock', 'Wizard'];
+    if (directClasses.includes(role)) return role;
+
+    // Map non-standard roles via template categories
+    const categoryToClass: Record<string, string> = {
+      ARCANE_CASTER: 'Wizard',
+      DIVINE_CASTER: 'Cleric',
+      SUPPORT_PERFORMER: 'Bard',
+    };
+
+    for (const category of TEMPLATE_CATEGORIES) {
+      if (category.roles.includes(role) && categoryToClass[category.category]) {
+        return categoryToClass[category.category];
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Load spells from the dnd5e.spells compendium by name
+   */
+  private static async loadSpellItems(spellNames: string[]): Promise<any[]> {
+    if (!game.packs || spellNames.length === 0) return [];
+
+    const pack = game.packs.get('dnd5e.spells');
+    if (!pack) {
+      console.warn("Dorman Lakely's NPC Gen | dnd5e.spells compendium not found");
+      return [];
+    }
+
+    // Build a name→id lookup map to avoid repeated linear scans
+    const nameToId = new Map<string, string>();
+    for (const entry of pack.index as any[]) {
+      if (entry?.name && entry._id && !nameToId.has(entry.name)) {
+        nameToId.set(entry.name, entry._id);
+      }
+    }
+
+    // Deduplicate spell names
+    const uniqueNames = [...new Set(spellNames)];
+    const items: any[] = [];
+
+    // Load in parallel batches of 10
+    const batchSize = 10;
+    for (let i = 0; i < uniqueNames.length; i += batchSize) {
+      const batch = uniqueNames.slice(i, i + batchSize);
+      const results = await Promise.all(
+        batch.map(async (spellName) => {
+          try {
+            const id = nameToId.get(spellName);
+            if (!id) {
+              console.warn(`Dorman Lakely's NPC Gen | Spell "${spellName}" not found in dnd5e.spells`);
+              return null;
+            }
+            const item = await pack.getDocument(id);
+            return item ? item.toObject() : null;
+          } catch (error) {
+            console.error(`Dorman Lakely's NPC Gen | Error loading spell "${spellName}":`, error);
+            return null;
+          }
+        })
+      );
+      items.push(...results.filter(Boolean));
+    }
+
+    return items;
+  }
+
+  /**
+   * Flatten a SpellSelection into a single array of spell names
+   */
+  private static flattenSpellSelection(selection: SpellSelection): string[] {
+    return [
+      ...selection.cantrips,
+      ...selection.level1,
+      ...selection.level2,
+      ...selection.level3,
+      ...selection.level4,
+      ...selection.level5,
+      ...selection.level6,
+      ...selection.level7,
+      ...selection.level8,
+      ...selection.level9,
+    ];
   }
 
   /**

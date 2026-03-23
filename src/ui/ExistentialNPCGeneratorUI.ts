@@ -806,22 +806,26 @@ export class NPCGeneratorUI {
       try {
         const spellcastingClass = this.getSpellcastingClassForRole(npc.class);
         if (spellcastingClass) {
+          // Always remove template spells for casters to avoid wizard defaults
+          scaledData.items = (scaledData.items || []).filter(
+            (item: any) => item.type !== 'spell'
+          );
+
           const level = crToLevel(npc.challengeRating);
           const spellSelection = getSpellsForClass(spellcastingClass, level);
           const spellNames = this.flattenSpellSelection(spellSelection);
 
           if (spellNames.length > 0) {
-            // Remove existing spell items from template
-            scaledData.items = (scaledData.items || []).filter(
-              (item: any) => item.type !== 'spell'
-            );
-
             // Load and add class-appropriate spells
             const spellItems = await this.loadSpellItems(spellNames);
             if (spellItems.length > 0) {
               scaledData.items.push(...spellItems);
               console.log(
                 `Dorman Lakely's NPC Gen | Added ${spellItems.length} ${spellcastingClass} spells for ${npc.name}`
+              );
+            } else {
+              console.warn(
+                `Dorman Lakely's NPC Gen | No spells could be loaded from compendium for ${spellcastingClass}`
               );
             }
           }
@@ -1155,22 +1159,41 @@ export class NPCGeneratorUI {
       return [];
     }
 
-    const items: any[] = [];
-    for (const spellName of spellNames) {
-      try {
-        const indexEntry = pack.index.find((i: any) => i.name === spellName);
-        if (!indexEntry) {
-          console.warn(`Dorman Lakely's NPC Gen | Spell "${spellName}" not found in dnd5e.spells`);
-          continue;
-        }
-        const item = await pack.getDocument(indexEntry._id);
-        if (item) {
-          items.push(item.toObject());
-        }
-      } catch (error) {
-        console.error(`Dorman Lakely's NPC Gen | Error loading spell "${spellName}":`, error);
+    // Build a name→id lookup map to avoid repeated linear scans
+    const nameToId = new Map<string, string>();
+    for (const entry of pack.index as any[]) {
+      if (entry?.name && entry._id && !nameToId.has(entry.name)) {
+        nameToId.set(entry.name, entry._id);
       }
     }
+
+    // Deduplicate spell names
+    const uniqueNames = [...new Set(spellNames)];
+    const items: any[] = [];
+
+    // Load in parallel batches of 10
+    const batchSize = 10;
+    for (let i = 0; i < uniqueNames.length; i += batchSize) {
+      const batch = uniqueNames.slice(i, i + batchSize);
+      const results = await Promise.all(
+        batch.map(async (spellName) => {
+          try {
+            const id = nameToId.get(spellName);
+            if (!id) {
+              console.warn(`Dorman Lakely's NPC Gen | Spell "${spellName}" not found in dnd5e.spells`);
+              return null;
+            }
+            const item = await pack.getDocument(id);
+            return item ? item.toObject() : null;
+          } catch (error) {
+            console.error(`Dorman Lakely's NPC Gen | Error loading spell "${spellName}":`, error);
+            return null;
+          }
+        })
+      );
+      items.push(...results.filter(Boolean));
+    }
+
     return items;
   }
 

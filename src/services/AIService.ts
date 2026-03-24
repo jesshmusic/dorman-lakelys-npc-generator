@@ -191,12 +191,29 @@ export class OpenAIProvider extends AIProvider {
   private apiKey: string;
   private model: string;
   private readonly baseURL = 'https://api.openai.com/v1/chat/completions';
-  private readonly corsProxy = 'https://corsproxy.io/?';
 
   constructor(apiKey: string, model: string = 'gpt-4o-mini') {
     super();
     this.apiKey = apiKey;
     this.model = model;
+  }
+
+  /**
+   * Fetch with automatic CORS proxy fallback.
+   * Foundry runs in Electron (no CORS), but hosted platforms (Forge) may need a proxy.
+   */
+  private async fetchWithCORSFallback(url: string, options: RequestInit): Promise<Response> {
+    try {
+      const response = await fetch(url, options);
+      if (response.ok) return response;
+      // If we get a non-ok response, it's still a real API response (not CORS blocked)
+      return response;
+    } catch (directError) {
+      console.warn("Dorman Lakely's NPC Gen | Direct fetch failed, trying CORS proxy...", directError);
+      const corsProxy = 'https://corsproxy.io/?';
+      const proxiedUrl = corsProxy + encodeURIComponent(url);
+      return await fetch(proxiedUrl, options);
+    }
   }
 
   /**
@@ -244,9 +261,6 @@ export class OpenAIProvider extends AIProvider {
     const temperature = this.getTemperatureForType(request.type);
 
     try {
-      // Use CORS proxy for browser access
-      const url = this.corsProxy + this.baseURL;
-
       const requestBody = {
         model: this.model,
         messages: [
@@ -265,12 +279,12 @@ export class OpenAIProvider extends AIProvider {
       };
 
       console.log("Dorman Lakely's NPC Gen | OpenAI Request:", {
-        url,
+        url: this.baseURL,
         model: this.model,
         bodyModel: requestBody.model
       });
 
-      const response = await fetch(url, {
+      const response = await this.fetchWithCORSFallback(this.baseURL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -383,7 +397,6 @@ export class OpenAIProvider extends AIProvider {
     try {
       // DALL-E API endpoint
       const dalleURL = 'https://api.openai.com/v1/images/generations';
-      const url = this.corsProxy + dalleURL;
 
       const requestBody: any = {
         model: model,
@@ -392,14 +405,17 @@ export class OpenAIProvider extends AIProvider {
         size: size
       };
 
-      // Add quality parameter based on model
-      if (model === 'dall-e-3') {
-        requestBody.quality = quality; // 'standard' or 'hd'
-      } else if (model === 'gpt-image-1') {
+      // Add model-specific parameters
+      if (model === 'gpt-image-1') {
+        // gpt-image-1 uses output_format (not response_format), returns base64 by default
+        requestBody.output_format = 'png';
         requestBody.quality = quality; // 'medium', 'high', or 'auto'
-        // Note: gpt-image-1 does not support the 'style' parameter
+      } else if (model === 'dall-e-3') {
+        // dall-e-3 uses response_format for base64
+        requestBody.response_format = 'b64_json';
+        requestBody.quality = quality; // 'standard' or 'hd'
       }
-      // DALL-E 2 doesn't support quality parameter
+      // DALL-E 2 doesn't support quality or response_format reliably
 
       console.log("Dorman Lakely's NPC Gen | Image Generation Request:", {
         model,
@@ -435,7 +451,7 @@ export class OpenAIProvider extends AIProvider {
         { permanent: false }
       );
 
-      const response = await fetch(url, {
+      const response = await this.fetchWithCORSFallback(dalleURL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -488,7 +504,8 @@ export class OpenAIProvider extends AIProvider {
       console.log("Dorman Lakely's NPC Gen | API Response Data:", data);
 
       const imageUrl = data.data?.[0]?.url;
-      const base64Data = data.data?.[0]?.b64_json;
+      // gpt-image-1 returns 'b64' key, dall-e-3 returns 'b64_json' key
+      const base64Data = data.data?.[0]?.b64_json || data.data?.[0]?.b64;
 
       if (!imageUrl && !base64Data) {
         console.error("Dorman Lakely's NPC Gen | No image URL or base64 data in response:", data);

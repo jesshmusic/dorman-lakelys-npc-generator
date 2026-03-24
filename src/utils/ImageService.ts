@@ -6,29 +6,41 @@ const PORTRAITS_SUBFOLDER = 'portraits';
 
 export class ImageService {
   /**
+   * Get the configured storage source (data, forgevtt, s3)
+   */
+  private static getStorageSource(): string {
+    try {
+      return ((game.settings as any)?.get(MODULE_ID, 'portraitStorageSource') as string) || 'data';
+    } catch {
+      return 'data';
+    }
+  }
+
+  /**
    * Ensure the image directory exists, creating it if necessary
    */
   static async ensureImageDirectory(): Promise<boolean> {
+    const source = this.getStorageSource();
     try {
       // Check if main folder exists
-      const mainFolderExists = await this.directoryExists(IMAGE_FOLDER);
+      const mainFolderExists = await this.directoryExists(IMAGE_FOLDER, source);
       if (!mainFolderExists) {
-        await FilePicker.createDirectory('data', IMAGE_FOLDER);
-        console.log(`${MODULE_ID} | Created directory: ${IMAGE_FOLDER}`);
+        await FilePicker.createDirectory(source as any, IMAGE_FOLDER);
+        console.log(`${MODULE_ID} | Created directory: ${IMAGE_FOLDER} (source: ${source})`);
       }
 
       // Check if portraits subfolder exists
       const portraitsPath = `${IMAGE_FOLDER}/${PORTRAITS_SUBFOLDER}`;
-      const portraitsFolderExists = await this.directoryExists(portraitsPath);
+      const portraitsFolderExists = await this.directoryExists(portraitsPath, source);
       if (!portraitsFolderExists) {
-        await FilePicker.createDirectory('data', portraitsPath);
-        console.log(`${MODULE_ID} | Created directory: ${portraitsPath}`);
+        await FilePicker.createDirectory(source as any, portraitsPath);
+        console.log(`${MODULE_ID} | Created directory: ${portraitsPath} (source: ${source})`);
       }
 
       return true;
     } catch (error) {
       console.error(`${MODULE_ID} | Failed to create image directories:`, error);
-      ui.notifications?.error('Failed to create image directories. Check console for details.');
+      ui.notifications?.error('Failed to create image directories. Check console for details. If you are using Forge VTT, try changing the Portrait Storage Source in module settings.');
       return false;
     }
   }
@@ -36,9 +48,9 @@ export class ImageService {
   /**
    * Check if a directory exists
    */
-  private static async directoryExists(path: string): Promise<boolean> {
+  private static async directoryExists(path: string, source?: string): Promise<boolean> {
     try {
-      await FilePicker.browse('data', path);
+      await FilePicker.browse((source || this.getStorageSource()) as any, path);
       return true;
     } catch (error) {
       return false;
@@ -80,7 +92,7 @@ export class ImageService {
 
       // Upload to Foundry file system
       console.log(`${MODULE_ID} | Uploading to: ${targetPath}/${filename}`);
-      const uploadResponse = await FilePicker.upload('data', targetPath, file, {});
+      const uploadResponse = await FilePicker.upload(this.getStorageSource() as any, targetPath, file, {});
       console.log(`${MODULE_ID} | Upload response:`, uploadResponse);
 
       if (uploadResponse && uploadResponse.path) {
@@ -152,7 +164,7 @@ export class ImageService {
 
       // Upload to Foundry file system
       console.log(`${MODULE_ID} | Uploading to: ${targetPath}/${filename}`);
-      const uploadResponse = await FilePicker.upload('data', targetPath, file, {});
+      const uploadResponse = await FilePicker.upload(this.getStorageSource() as any, targetPath, file, {});
       console.log(`${MODULE_ID} | Upload response:`, uploadResponse);
 
       if (uploadResponse && uploadResponse.path) {

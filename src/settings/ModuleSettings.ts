@@ -96,6 +96,21 @@ export function registerSettings(): void {
     default: 0.9
   });
 
+  // Portrait Storage Source (for Forge VTT / S3 users)
+  (game.settings as any)?.register(MODULE_ID, 'portraitStorageSource', {
+    name: 'Portrait Storage Source',
+    hint: 'Where to save generated portrait images. Use "User Data" for local/self-hosted Foundry. Forge VTT users should select "Forge VTT Assets".',
+    scope: 'world',
+    config: true,
+    type: String,
+    choices: {
+      data: 'User Data (Default - local/self-hosted)',
+      forgevtt: 'Forge VTT Assets',
+      s3: 'S3 Storage'
+    },
+    default: 'data'
+  });
+
   // Debug Mode
   (game.settings as any)?.register(MODULE_ID, 'debugMode', {
     name: 'Debug Mode',

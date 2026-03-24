@@ -200,7 +200,9 @@ export class OpenAIProvider extends AIProvider {
 
   /**
    * Fetch with automatic CORS proxy fallback.
-   * Foundry runs in Electron (no CORS), but hosted platforms (Forge) may need a proxy.
+   * Foundry Desktop runs in Electron (no CORS restrictions), so direct calls work.
+   * Hosted platforms (Forge VTT) may block direct API calls due to browser CORS,
+   * so we fall back to a CORS proxy automatically.
    */
   private async fetchWithCORSFallback(url: string, options: RequestInit): Promise<Response> {
     try {
@@ -209,7 +211,7 @@ export class OpenAIProvider extends AIProvider {
       // If we get a non-ok response, it's still a real API response (not CORS blocked)
       return response;
     } catch (directError) {
-      console.warn("Dorman Lakely's NPC Gen | Direct fetch failed, trying CORS proxy...", directError);
+      console.warn("Dorman Lakely's NPC Gen | Direct fetch failed, trying CORS proxy...");
       const corsProxy = 'https://corsproxy.io/?';
       const proxiedUrl = corsProxy + encodeURIComponent(url);
       return await fetch(proxiedUrl, options);

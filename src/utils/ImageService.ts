@@ -3,32 +3,60 @@
 const MODULE_ID = 'dorman-lakelys-npc-generator';
 const IMAGE_FOLDER = 'DormanNPCGenImages';
 const PORTRAITS_SUBFOLDER = 'portraits';
+const VALID_STORAGE_SOURCES = ['data', 'forgevtt', 's3'] as const;
+type StorageSource = (typeof VALID_STORAGE_SOURCES)[number];
 
 export class ImageService {
   /**
-   * Ensure the image directory exists, creating it if necessary
+   * Get and validate the configured storage source (data, forgevtt, s3).
+   * Falls back to 'data' if the setting is missing or invalid.
+   */
+  private static getStorageSource(): StorageSource {
+    try {
+      const raw = ((game.settings as any)?.get(MODULE_ID, 'portraitStorageSource') as string) || 'data';
+      if ((VALID_STORAGE_SOURCES as readonly string[]).includes(raw)) {
+        return raw as StorageSource;
+      }
+      console.warn(`${MODULE_ID} | Invalid storage source "${raw}", falling back to "data"`);
+      return 'data';
+    } catch {
+      return 'data';
+    }
+  }
+
+  /**
+   * Ensure the image directory exists, creating it if necessary.
+   * Uses the current configured storage source.
    */
   static async ensureImageDirectory(): Promise<boolean> {
+    return this.ensureImageDirectoryForSource(this.getStorageSource());
+  }
+
+  /**
+   * Ensure the image directory exists for a specific storage source.
+   * Used internally to ensure the source is read once per operation.
+   */
+  private static async ensureImageDirectoryForSource(source: StorageSource): Promise<boolean> {
     try {
       // Check if main folder exists
-      const mainFolderExists = await this.directoryExists(IMAGE_FOLDER);
+      const mainFolderExists = await this.directoryExists(IMAGE_FOLDER, source);
       if (!mainFolderExists) {
-        await FilePicker.createDirectory('data', IMAGE_FOLDER);
-        console.log(`${MODULE_ID} | Created directory: ${IMAGE_FOLDER}`);
+        await FilePicker.createDirectory(source as any, IMAGE_FOLDER);
+        console.log(`${MODULE_ID} | Created directory: ${IMAGE_FOLDER} (source: ${source})`);
       }
 
       // Check if portraits subfolder exists
       const portraitsPath = `${IMAGE_FOLDER}/${PORTRAITS_SUBFOLDER}`;
-      const portraitsFolderExists = await this.directoryExists(portraitsPath);
+      const portraitsFolderExists = await this.directoryExists(portraitsPath, source);
       if (!portraitsFolderExists) {
-        await FilePicker.createDirectory('data', portraitsPath);
-        console.log(`${MODULE_ID} | Created directory: ${portraitsPath}`);
+        await FilePicker.createDirectory(source as any, portraitsPath);
+        console.log(`${MODULE_ID} | Created directory: ${portraitsPath} (source: ${source})`);
       }
 
       return true;
     } catch (error) {
       console.error(`${MODULE_ID} | Failed to create image directories:`, error);
-      ui.notifications?.error('Failed to create image directories. Check console for details.');
+      ui.notifications?.error('Failed to create image directories. Check console for details. If you are using Forge VTT, try changing the Portrait Storage Source in module settings.');
       return false;
     }
   }
@@ -36,9 +64,9 @@ export class ImageService {
   /**
    * Check if a directory exists
    */
-  private static async directoryExists(path: string): Promise<boolean> {
+  private static async directoryExists(path: string, source: StorageSource): Promise<boolean> {
     try {
-      await FilePicker.browse('data', path);
+      await FilePicker.browse(source as any, path);
       return true;
     } catch (error) {
       return false;
@@ -46,15 +74,19 @@ export class ImageService {
   }
 
   /**
-   * Save base64-encoded image data to local file system
+   * Save base64-encoded image data to local file system.
+   * Reads the storage source once and uses it for all operations to avoid mismatches.
    * @param base64Data - Base64-encoded image data (without data: prefix)
    * @param npcName - Name of the NPC (used for filename)
    * @returns Local file path or null if failed
    */
   static async saveBase64Image(base64Data: string, npcName: string): Promise<string | null> {
+    // Read storage source once for the entire operation
+    const source = this.getStorageSource();
+
     try {
       // Ensure directory exists
-      const dirExists = await this.ensureImageDirectory();
+      const dirExists = await this.ensureImageDirectoryForSource(source);
       if (!dirExists) {
         return null;
       }
@@ -78,9 +110,9 @@ export class ImageService {
       const file = new File([blob], filename, { type: 'image/png' });
       console.log(`${MODULE_ID} | Created file object: ${filename}`);
 
-      // Upload to Foundry file system
-      console.log(`${MODULE_ID} | Uploading to: ${targetPath}/${filename}`);
-      const uploadResponse = await FilePicker.upload('data', targetPath, file, {});
+      // Upload to Foundry file system using the same source
+      console.log(`${MODULE_ID} | Uploading to: ${targetPath}/${filename} (source: ${source})`);
+      const uploadResponse = await FilePicker.upload(source as any, targetPath, file, {});
       console.log(`${MODULE_ID} | Upload response:`, uploadResponse);
 
       if (uploadResponse && uploadResponse.path) {
@@ -101,15 +133,19 @@ export class ImageService {
   }
 
   /**
-   * Download image from URL and save to local file system
+   * Download image from URL and save to local file system.
+   * Reads the storage source once and uses it for all operations to avoid mismatches.
    * @param imageUrl - The temporary URL from OpenAI
    * @param npcName - Name of the NPC (used for filename)
    * @returns Local file path or null if failed
    */
   static async downloadAndSave(imageUrl: string, npcName: string): Promise<string | null> {
+    // Read storage source once for the entire operation
+    const source = this.getStorageSource();
+
     try {
       // Ensure directory exists
-      const dirExists = await this.ensureImageDirectory();
+      const dirExists = await this.ensureImageDirectoryForSource(source);
       if (!dirExists) {
         return null;
       }
@@ -128,7 +164,7 @@ export class ImageService {
       } catch (directError) {
         console.warn(`${MODULE_ID} | Direct fetch failed, trying CORS proxy...`, directError);
 
-        // Fall back to CORS proxy
+        // Fall back to CORS proxy (image download URLs don't contain API keys)
         const corsProxy = 'https://corsproxy.io/?';
         const proxiedUrl = corsProxy + encodeURIComponent(imageUrl);
 
@@ -150,9 +186,9 @@ export class ImageService {
       const file = new File([blob], filename, { type: 'image/png' });
       console.log(`${MODULE_ID} | Created file object: ${filename}`);
 
-      // Upload to Foundry file system
-      console.log(`${MODULE_ID} | Uploading to: ${targetPath}/${filename}`);
-      const uploadResponse = await FilePicker.upload('data', targetPath, file, {});
+      // Upload to Foundry file system using the same source
+      console.log(`${MODULE_ID} | Uploading to: ${targetPath}/${filename} (source: ${source})`);
+      const uploadResponse = await FilePicker.upload(source as any, targetPath, file, {});
       console.log(`${MODULE_ID} | Upload response:`, uploadResponse);
 
       if (uploadResponse && uploadResponse.path) {

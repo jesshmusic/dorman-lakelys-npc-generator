@@ -131,14 +131,37 @@ describe('ModuleSettings', () => {
       );
     });
 
-    it('should register exactly 7 settings', () => {
+    it('should register portrait storage source setting', () => {
+      registerSettings();
+
+      const mockRegister = (game.settings as any).register;
+
+      expect(mockRegister).toHaveBeenCalledWith(
+        'dorman-lakelys-npc-generator',
+        'portraitStorageSource',
+        expect.objectContaining({
+          name: 'Portrait Storage Source',
+          scope: 'world',
+          config: true,
+          type: String,
+          default: 'data',
+          choices: expect.objectContaining({
+            data: expect.any(String),
+            forgevtt: expect.any(String),
+            s3: expect.any(String)
+          })
+        })
+      );
+    });
+
+    it('should register exactly 9 settings', () => {
       registerSettings();
 
       const mockRegister = (game.settings as any).register;
 
       // enableAI, openaiApiKey, openaiModel, portraitArtStyle,
-      // nameTemperature, bioTemperature, portraitTemperature, debugMode
-      expect(mockRegister).toHaveBeenCalledTimes(8);
+      // nameTemperature, bioTemperature, portraitTemperature, portraitStorageSource, debugMode
+      expect(mockRegister).toHaveBeenCalledTimes(9);
     });
 
     it('should handle missing game.settings gracefully', () => {

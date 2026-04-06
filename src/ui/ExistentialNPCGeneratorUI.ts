@@ -243,7 +243,9 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
     const input = this.element.querySelector(`#npc-${target}`) as HTMLInputElement;
     if (!input) return;
 
-    const fp = new (FilePicker as any)({
+    // Foundry v14 removed the global FilePicker shim; use the namespaced class.
+    const FilePickerClass = (foundry as any).applications?.apps?.FilePicker ?? (FilePicker as any);
+    const fp = new FilePickerClass({
       type: type,
       current: input.value,
       callback: (path: string) => {
@@ -834,8 +836,14 @@ export class NPCGeneratorUI {
         console.error("Dorman Lakely's NPC Gen | Error adding class spells:", error);
       }
 
-      // 8. Create the actor
-      const actor = await Actor.create(scaledData);
+      // 8. Create the actor. Use the document class lookup so this keeps
+      // working if/when Foundry drops the bare `Actor` global in favour of
+      // namespaced foundry.documents.Actor.
+      const ActorClass =
+        (globalThis as any).getDocumentClass?.('Actor') ??
+        (foundry as any).documents?.Actor ??
+        (Actor as any);
+      const actor = await ActorClass.create(scaledData);
 
       if (actor) {
         // Check if CR Calculator is available for validation
@@ -999,7 +1007,11 @@ export class NPCGeneratorUI {
         }
       };
 
-      const actor = await Actor.create(actorData);
+      const ActorClass2 =
+        (globalThis as any).getDocumentClass?.('Actor') ??
+        (foundry as any).documents?.Actor ??
+        (Actor as any);
+      const actor = await ActorClass2.create(actorData);
 
       if (actor) {
         // Add equipment to the actor

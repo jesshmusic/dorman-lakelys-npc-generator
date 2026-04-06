@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2026-04-06
+
+### Added
+
+- Foundry VTT v14 compatibility (`compatibility.verified` bumped to `14`, hard `maximum: "13"` cap removed).
+
+### Fixed
+
+- **`PortraitConfirmationDialog` rewritten for v14**: the dialog previously extended the legacy `Dialog` class and used jQuery selectors (`html.find()`, `.off().on()`) plus mutable `dialogRef.element` access — none of which works in v14 once the legacy `Dialog` shim is removed. The rewrite uses `foundry.applications.api.DialogV2.wait` with native DOM event listeners attached via the dialog's `render` callback. Live cost recomputation, model→size/quality cascading, and prompt regeneration on style change all still work; the loading state is now communicated via UI notifications instead of a swap-out content panel.
+- **`FilePicker` global removed in v14**: `src/ui/ExistentialNPCGeneratorUI.ts` and `src/utils/ImageService.ts` now resolve `FilePicker` via `foundry.applications.apps.FilePicker` (with a fallback to the legacy global) so portrait upload, directory creation, and the in-form file picker continue to work on v14.
+- **`Actor.create` global**: the two world-actor / compendium-actor creation paths in `src/ui/ExistentialNPCGeneratorUI.ts` now resolve the Actor constructor through `getDocumentClass("Actor")` (with fallbacks to `foundry.documents.Actor` and the legacy global).
+
+### Notes (dnd5e 5.x audit)
+
+- `system.attributes.hp.{value, max, temp, tempmax}` schema unchanged in 5.3 — `tempmax` field still exists.
+- `system.skills[key].value` is still a numeric proficiency multiplier (0|0.5|1|2) in 5.3 — the existing `value > 0` test for "is proficient" remains correct.
+- `system.traits.languages.value` is still a `Set<string>` of `CONFIG.DND5E.languages` keys.
+- `system.attributes.ac.{calc, flat, value}` and `system.abilities[key].{value, mod, proficient}` paths all unchanged.
+- No code changes required for the dnd5e schema — only the v14 Foundry API surface was broken.
+
 ## [1.4.0] - 2025-11-06
 
 ### Added

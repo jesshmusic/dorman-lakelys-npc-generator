@@ -9,7 +9,7 @@
     }
   ],
   "compatibility": {
-    "minimum": "13",
+    "minimum": "14",
     "verified": "14"
   },
   "relationships": {
@@ -24,8 +24,12 @@
       }
     ]
   },
-  "esmodules": ["scripts/main.js"],
-  "styles": ["styles/existential-npc-generator.css"],
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "styles": [
+    "styles/existential-npc-generator.css"
+  ],
   "languages": [
     {
       "lang": "en",

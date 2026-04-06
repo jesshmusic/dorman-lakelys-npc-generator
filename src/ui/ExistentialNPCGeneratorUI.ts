@@ -15,6 +15,23 @@ import {
 
 const MODULE_ID = 'dorman-lakelys-npc-generator';
 
+/**
+ * Resolve the Actor document class. Foundry v14 may drop the bare `Actor`
+ * global; the canonical lookups are `getDocumentClass("Actor")` and
+ * `foundry.documents.Actor`. The final fallback uses
+ * `(globalThis as any).Actor` instead of a bare `Actor` reference because
+ * bare identifiers throw `ReferenceError` before the `??` operator can fall
+ * through if the global has been removed entirely; property access on
+ * `globalThis` returns `undefined` instead.
+ */
+function getActorClass(): any {
+  return (
+    (globalThis as any).getDocumentClass?.('Actor') ??
+    (foundry as any).documents?.Actor ??
+    (globalThis as any).Actor
+  );
+}
+
 // Foundry V2 Application Dialog
 class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationMixin(
   foundry.applications.api.ApplicationV2
@@ -243,7 +260,9 @@ class NPCGeneratorDialog extends foundry.applications.api.HandlebarsApplicationM
     const input = this.element.querySelector(`#npc-${target}`) as HTMLInputElement;
     if (!input) return;
 
-    const fp = new (FilePicker as any)({
+    // Foundry v14 removed the global FilePicker shim; use the namespaced class.
+    const FilePickerClass = (foundry as any).applications?.apps?.FilePicker ?? (globalThis as any).FilePicker;
+    const fp = new FilePickerClass({
       type: type,
       current: input.value,
       callback: (path: string) => {
@@ -834,8 +853,11 @@ export class NPCGeneratorUI {
         console.error("Dorman Lakely's NPC Gen | Error adding class spells:", error);
       }
 
-      // 8. Create the actor
-      const actor = await Actor.create(scaledData);
+      // 8. Create the actor via the canonical document-class lookup. The
+      // final fallback uses `(globalThis as any).Actor`, NOT a bare `Actor`
+      // reference — bare identifiers throw ReferenceError before the `??` can
+      // fall through if the global has been removed entirely.
+      const actor = await getActorClass().create(scaledData);
 
       if (actor) {
         // Check if CR Calculator is available for validation
@@ -999,7 +1021,7 @@ export class NPCGeneratorUI {
         }
       };
 
-      const actor = await Actor.create(actorData);
+      const actor = await getActorClass().create(actorData);
 
       if (actor) {
         // Add equipment to the actor

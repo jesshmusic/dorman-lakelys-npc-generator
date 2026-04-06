@@ -6,6 +6,15 @@ const PORTRAITS_SUBFOLDER = 'portraits';
 const VALID_STORAGE_SOURCES = ['data', 'forgevtt', 's3'] as const;
 type StorageSource = (typeof VALID_STORAGE_SOURCES)[number];
 
+/**
+ * Resolve the FilePicker class. Foundry v14 removed the bare `FilePicker`
+ * global; the canonical location is `foundry.applications.apps.FilePicker`.
+ * Falls back to the legacy global so this code keeps working on v13.
+ */
+function getFilePicker(): any {
+  return (foundry as any).applications?.apps?.FilePicker ?? (globalThis as any).FilePicker;
+}
+
 export class ImageService {
   /**
    * Get and validate the configured storage source (data, forgevtt, s3).
@@ -38,10 +47,11 @@ export class ImageService {
    */
   private static async ensureImageDirectoryForSource(source: StorageSource): Promise<boolean> {
     try {
+      const FP = getFilePicker();
       // Check if main folder exists
       const mainFolderExists = await this.directoryExists(IMAGE_FOLDER, source);
       if (!mainFolderExists) {
-        await FilePicker.createDirectory(source as any, IMAGE_FOLDER);
+        await FP.createDirectory(source as any, IMAGE_FOLDER);
         console.log(`${MODULE_ID} | Created directory: ${IMAGE_FOLDER} (source: ${source})`);
       }
 
@@ -49,7 +59,7 @@ export class ImageService {
       const portraitsPath = `${IMAGE_FOLDER}/${PORTRAITS_SUBFOLDER}`;
       const portraitsFolderExists = await this.directoryExists(portraitsPath, source);
       if (!portraitsFolderExists) {
-        await FilePicker.createDirectory(source as any, portraitsPath);
+        await FP.createDirectory(source as any, portraitsPath);
         console.log(`${MODULE_ID} | Created directory: ${portraitsPath} (source: ${source})`);
       }
 
@@ -66,7 +76,8 @@ export class ImageService {
    */
   private static async directoryExists(path: string, source: StorageSource): Promise<boolean> {
     try {
-      await FilePicker.browse(source as any, path);
+      const FP = getFilePicker();
+      await FP.browse(source as any, path);
       return true;
     } catch (error) {
       return false;
@@ -112,7 +123,8 @@ export class ImageService {
 
       // Upload to Foundry file system using the same source
       console.log(`${MODULE_ID} | Uploading to: ${targetPath}/${filename} (source: ${source})`);
-      const uploadResponse = await FilePicker.upload(source as any, targetPath, file, {});
+      const FP = getFilePicker();
+      const uploadResponse = await FP.upload(source as any, targetPath, file, {});
       console.log(`${MODULE_ID} | Upload response:`, uploadResponse);
 
       if (uploadResponse && uploadResponse.path) {
@@ -188,7 +200,8 @@ export class ImageService {
 
       // Upload to Foundry file system using the same source
       console.log(`${MODULE_ID} | Uploading to: ${targetPath}/${filename} (source: ${source})`);
-      const uploadResponse = await FilePicker.upload(source as any, targetPath, file, {});
+      const FP = getFilePicker();
+      const uploadResponse = await FP.upload(source as any, targetPath, file, {});
       console.log(`${MODULE_ID} | Upload response:`, uploadResponse);
 
       if (uploadResponse && uploadResponse.path) {

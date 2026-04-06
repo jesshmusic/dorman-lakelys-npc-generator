@@ -92,7 +92,15 @@ export class PortraitConfirmationDialog {
   }
 
   /**
-   * Show the confirmation dialog and handle portrait generation
+   * Show the confirmation dialog and handle portrait generation.
+   *
+   * Foundry v14 rewrite: this dialog previously extended the legacy `Dialog`
+   * class and used jQuery selectors (`html.find()`, `.off().on()`) plus mutable
+   * `dialogRef.element` access — none of which works in v14 once the legacy
+   * `Dialog` shim is removed. The rewrite uses `DialogV2.wait` with a static
+   * form, attaches a single render-time listener via the `render` callback to
+   * keep the model→size/quality dropdowns in sync, and handles generation /
+   * error states inside the confirm button callback.
    */
   static async show(context: any): Promise<PortraitGenerationResult> {
     // Get current art style setting as default
@@ -101,38 +109,24 @@ export class PortraitConfirmationDialog {
 
     // Generate initial prompt
     const apiKey = ((game.settings as any)?.get(MODULE_ID, 'openaiApiKey') as string) || '';
-    const model =
+    const settingModel =
       ((game.settings as any)?.get(MODULE_ID, 'openaiModel') as string) || 'gpt-4o-mini';
-    const provider = new OpenAIProvider(apiKey, model);
+    const provider = new OpenAIProvider(apiKey, settingModel);
 
-    return new Promise(resolve => {
-      let dialogRef: Dialog;
-      let isGenerating = false;
-      let currentModel = 'gpt-image-1';
-      let currentSize = '1024x1024';
-      let currentQuality = 'medium';
-      let currentStyle = defaultStyle;
-      let currentPrompt = '';
+    let currentModel = 'gpt-image-1';
+    let currentSize = '1024x1024';
+    let currentQuality = 'medium';
+    let currentStyle = defaultStyle;
 
-      // Function to regenerate prompt based on current settings
-      const regeneratePrompt = () => {
-        const contextWithOptions = {
-          ...context,
-          artStyle: currentStyle
-        };
+    // Build the initial prompt
+    const buildPrompt = (style: string): string => {
+      const contextWithOptions = { ...context, artStyle: style };
+      const request: AIGenerationRequest = { type: 'portrait', context: contextWithOptions };
+      return (provider as any).buildPrompt(request);
+    };
+    let currentPrompt = buildPrompt(currentStyle);
 
-        const request: AIGenerationRequest = {
-          type: 'portrait',
-          context: contextWithOptions
-        };
-
-        currentPrompt = (provider as any).buildPrompt(request);
-      };
-
-      // Generate initial prompt
-      regeneratePrompt();
-
-      const renderContent = (errorMsg?: string): string => {
+    const renderContent = (): string => {
         const cost = this.calculateCost(currentModel, currentSize, currentQuality);
 
         // Get size options based on model
@@ -214,236 +208,246 @@ export class PortraitConfirmationDialog {
             <div class="dialog-section">
               <p class="dialog-info">
                 <i class="fas fa-dollar-sign"></i>
-                <strong>Estimated Cost:</strong> $${cost.toFixed(3)} USD
+                <strong>Estimated Cost:</strong> <span class="dlc-portrait-cost">$${cost.toFixed(3)} USD</span>
               </p>
               <p class="dialog-note">
                 The image will be automatically saved to your Data folder.
               </p>
             </div>
 
-            ${
-              errorMsg
-                ? `
-              <div class="dialog-error" style="
-                background: #ffebee;
-                border-left: 4px solid #f44336;
-                padding: 12px;
-                margin-bottom: 16px;
-                color: #c62828;
-              ">
-                <i class="fas fa-exclamation-triangle"></i>
-                <strong>Error:</strong> ${errorMsg}
-              </div>
-            `
-                : ''
-            }
+            <div class="form-group">
+              <label for="portrait-model">Model:</label>
+              <select id="portrait-model" name="model">
+                ${this.MODELS.map(
+                  m =>
+                    `<option value="${m.value}" ${m.value === currentModel ? 'selected' : ''}>${m.label}</option>`
+                ).join('')}
+              </select>
+            </div>
 
-            ${
-              isGenerating
-                ? `
-              <div class="dialog-loading" style="
-                background: #e3f2fd;
-                border-left: 4px solid #2196f3;
-                padding: 16px;
-                margin-bottom: 16px;
-                text-align: center;
-              ">
-                <i class="fas fa-spinner fa-spin" style="font-size: 20px; color: #2196f3;"></i>
-                <p style="margin: 10px 0 0 0; font-weight: bold; color: #1565c0;">
-                  Generating portrait... This may take 15-30 seconds.
-                </p>
-                <p style="margin: 5px 0 0 0; font-size: 12px; color: #1976d2;">
-                  Please do not close this window.
-                </p>
-              </div>
-            `
-                : `
-              <div class="form-group">
-                <label for="portrait-model">Model:</label>
-                <select id="portrait-model" name="model">
-                  ${this.MODELS.map(
-                    m =>
-                      `<option value="${m.value}" ${m.value === currentModel ? 'selected' : ''}>${m.label}</option>`
-                  ).join('')}
-                </select>
-              </div>
+            <div class="form-group">
+              <label for="portrait-size">Size:</label>
+              <select id="portrait-size" name="size">
+                ${sizeOptions.map(s => `<option value="${s.value}" ${s.value === currentSize ? 'selected' : ''}>${s.label}</option>`).join('')}
+              </select>
+            </div>
 
-              <div class="form-group">
-                <label for="portrait-size">Size:</label>
-                <select id="portrait-size" name="size">
-                  ${sizeOptions.map(s => `<option value="${s.value}" ${s.value === currentSize ? 'selected' : ''}>${s.label}</option>`).join('')}
-                </select>
-              </div>
+            <div class="form-group">
+              <label for="portrait-quality">Quality:</label>
+              <select id="portrait-quality" name="quality" ${qualityDisabled ? 'disabled' : ''}>
+                ${qualityOptions.map((q: any) => `<option value="${q.value}" ${q.value === currentQuality ? 'selected' : ''}>${q.label}</option>`).join('')}
+              </select>
+              ${qualityDisabled ? '<p class="form-hint">Quality selection only available for DALL-E 3 and GPT-4o</p>' : ''}
+            </div>
 
-              <div class="form-group">
-                <label for="portrait-quality">Quality:</label>
-                <select id="portrait-quality" name="quality" ${qualityDisabled ? 'disabled' : ''}>
-                  ${qualityOptions.map((q: any) => `<option value="${q.value}" ${q.value === currentQuality ? 'selected' : ''}>${q.label}</option>`).join('')}
-                </select>
-                ${qualityDisabled ? '<p class="form-hint">Quality selection only available for DALL-E 3 and GPT-4o</p>' : ''}
-              </div>
+            <div class="form-group">
+              <label for="portrait-style">Art Style:</label>
+              <select id="portrait-style" name="style">
+                ${this.ART_STYLES.map(s => `<option value="${s.value}" ${s.value === currentStyle ? 'selected' : ''}>${s.label}</option>`).join('')}
+              </select>
+            </div>
 
-              <div class="form-group">
-                <label for="portrait-style">Art Style:</label>
-                <select id="portrait-style" name="style">
-                  ${this.ART_STYLES.map(s => `<option value="${s.value}" ${s.value === currentStyle ? 'selected' : ''}>${s.label}</option>`).join('')}
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="portrait-prompt">Image Prompt:</label>
-                <textarea id="portrait-prompt" name="prompt" rows="6">${currentPrompt}</textarea>
-                <p class="form-hint">Edit the prompt to customize the generated image. Changes will be used for generation.</p>
-              </div>
-            `
-            }
+            <div class="form-group">
+              <label for="portrait-prompt">Image Prompt:</label>
+              <textarea id="portrait-prompt" name="prompt" rows="6">${currentPrompt}</textarea>
+              <p class="form-hint">Edit the prompt to customize the generated image. Changes will be used for generation.</p>
+            </div>
           </div>
         `;
       };
 
-      const updateDialog = (errorMsg?: string) => {
-        if (dialogRef) {
-          // Save current prompt value before re-rendering
-          const promptTextarea = dialogRef.element.find(
-            '#portrait-prompt'
-          )[0] as HTMLTextAreaElement;
-          if (promptTextarea) {
-            currentPrompt = promptTextarea.value;
-          }
+      // v14 DialogV2 + manual render-time wiring. We render the form once,
+      // then attach native DOM listeners that update the cost label and
+      // regenerate the prompt in-place when the user changes inputs. The
+      // confirm button callback runs the generation and resolves the wait
+      // promise; on error we surface a UI notification and resolve with
+      // `{ success: false }` so the dialog closes (the previous comment
+      // claimed the error path re-threw to keep the dialog open via
+      // rejectClose, but the current code does not do that).
+      try {
+        const result = await (foundry as any).applications.api.DialogV2.wait({
+          window: { title: 'DALL-E Portrait Generation' },
+          position: { width: 600 },
+          content: renderContent(),
+          rejectClose: false,
+          render: (_event: Event, dialog: any) => {
+            const root: HTMLElement | null = dialog?.element ?? null;
+            if (!root) return;
+            const modelSel = root.querySelector('#portrait-model') as HTMLSelectElement | null;
+            const sizeSel = root.querySelector('#portrait-size') as HTMLSelectElement | null;
+            const qualitySel = root.querySelector('#portrait-quality') as HTMLSelectElement | null;
+            const styleSel = root.querySelector('#portrait-style') as HTMLSelectElement | null;
+            const promptArea = root.querySelector('#portrait-prompt') as HTMLTextAreaElement | null;
+            const costEl = root.querySelector('.dlc-portrait-cost') as HTMLElement | null;
 
-          dialogRef.data.content = renderContent(errorMsg);
-          dialogRef.render(true);
+            const updateCost = () => {
+              if (!costEl) return;
+              const c = PortraitConfirmationDialog.calculateCost(
+                currentModel,
+                currentSize,
+                currentQuality
+              );
+              costEl.textContent = `$${c.toFixed(3)} USD`;
+            };
 
-          // Re-attach event listeners after render completes
-          if (!isGenerating) {
-            setTimeout(() => {
-              const html = dialogRef.element;
-              const modelSelect = html.find('#portrait-model');
-              const sizeSelect = html.find('#portrait-size');
-              const qualitySelect = html.find('#portrait-quality');
-              const styleSelect = html.find('#portrait-style');
+            // Helper: rebuild the size/quality <option> lists for the
+            // currently-selected model. Different models support different
+            // dimensions and quality tiers, so we have to repopulate (not just
+            // re-set the .value of) these selects when the model changes.
+            const populateOptions = (
+              select: HTMLSelectElement | null,
+              opts: ReadonlyArray<{ value: string; label: string }>,
+              selected: string
+            ) => {
+              if (!select) return;
+              select.innerHTML = opts
+                .map(
+                  o =>
+                    `<option value="${o.value}"${o.value === selected ? ' selected' : ''}>${o.label}</option>`
+                )
+                .join('');
+              select.value = selected;
+            };
 
-              modelSelect.off('change').on('change', (e: any) => {
-                currentModel = e.target.value;
+            const repopulateForModel = () => {
+              // Pick size + quality option lists for the current model.
+              let sizeOpts: ReadonlyArray<{ value: string; label: string }>;
+              let qualityOpts: ReadonlyArray<{ value: string; label: string }>;
+              let qualityDisabled = false;
 
-                // Reset size to first valid option for new model
-                if (currentModel === 'dall-e-3') {
-                  currentSize = '1024x1024';
-                  currentQuality = 'standard';
-                } else if (currentModel === 'gpt-image-1') {
-                  currentSize = '1024x1024';
-                  currentQuality = 'medium';
-                } else if (currentModel === 'dall-e-2') {
-                  currentSize = '1024x1024';
-                  currentQuality = 'standard';
-                }
-                updateDialog();
-              });
-
-              sizeSelect.off('change').on('change', (e: any) => {
-                currentSize = e.target.value;
-                updateDialog();
-              });
-
-              qualitySelect.off('change').on('change', (e: any) => {
-                currentQuality = e.target.value;
-                updateDialog();
-              });
-
-              styleSelect.off('change').on('change', (e: any) => {
-                currentStyle = e.target.value;
-                regeneratePrompt();
-                updateDialog();
-              });
-            }, 50); // Increased timeout to ensure render completes
-          }
-        }
-      };
-
-      const handleConfirm = async (html: JQuery) => {
-        if (isGenerating) return;
-
-        const promptTextarea = html.find('#portrait-prompt')[0] as HTMLTextAreaElement;
-        const editedPrompt = promptTextarea?.value || currentPrompt;
-
-        isGenerating = true;
-        updateDialog();
-
-        // Disable buttons
-        html.closest('.dialog').find('button').prop('disabled', true);
-
-        try {
-          const cost = this.calculateCost(currentModel, currentSize, currentQuality);
-
-          ui.notifications?.info(
-            `Generating portrait... This will cost approximately $${cost.toFixed(3)} and may take 15-30 seconds.`,
-            { permanent: false }
-          );
-
-          const contextWithOptions = {
-            ...context,
-            artStyle: currentStyle,
-            dalleModel: currentModel,
-            dalleSize: currentSize,
-            dalleQuality: currentQuality,
-            customPrompt: editedPrompt
-          };
-
-          const request: AIGenerationRequest = {
-            type: 'portrait',
-            context: contextWithOptions
-          };
-
-          const response: AIGenerationResponse = await AIService.generate(request);
-
-          if (!response.success) {
-            isGenerating = false;
-            updateDialog(response.error || 'Failed to generate portrait. Please try again.');
-            html.closest('.dialog').find('button').prop('disabled', false);
-            return;
-          }
-
-          const portraitPath = response.content as string;
-          dialogRef.close();
-          resolve({
-            success: true,
-            portraitPath
-          });
-        } catch (error: any) {
-          isGenerating = false;
-          updateDialog(error?.message || 'An unexpected error occurred. Please try again.');
-          html.closest('.dialog').find('button').prop('disabled', false);
-        }
-      };
-
-      dialogRef = new Dialog({
-        title: 'DALL-E Portrait Generation',
-        content: renderContent(),
-        buttons: {
-          confirm: {
-            icon: '<i class="fas fa-check"></i>',
-            label: 'Confirm',
-            callback: handleConfirm
-          },
-          cancel: {
-            icon: '<i class="fas fa-times"></i>',
-            label: 'Cancel',
-            callback: () => {
-              if (!isGenerating) {
-                resolve({ success: false, cancelled: true });
+              if (currentModel === 'dall-e-3') {
+                sizeOpts = PortraitConfirmationDialog.SIZES_DALLE3;
+                qualityOpts = PortraitConfirmationDialog.QUALITY_DALLE3;
+              } else if (currentModel === 'gpt-image-1') {
+                sizeOpts = PortraitConfirmationDialog.SIZES_GPT4O;
+                qualityOpts = PortraitConfirmationDialog.QUALITY_GPT4O;
+              } else {
+                sizeOpts = PortraitConfirmationDialog.SIZES_DALLE2;
+                qualityOpts = PortraitConfirmationDialog.QUALITY_DALLE3; // unused
+                qualityDisabled = true;
               }
-            }
-          }
-        },
-        default: 'confirm',
-        close: () => {
-          if (!isGenerating) {
-            resolve({ success: false, cancelled: true });
-          }
-        }
-      });
 
-      dialogRef.render(true);
-    });
+              // Make sure currentSize/currentQuality are still valid for the
+              // new model; if not, snap to the first option.
+              if (!sizeOpts.find(s => s.value === currentSize)) {
+                currentSize = sizeOpts[0].value;
+              }
+              if (!qualityOpts.find(q => q.value === currentQuality)) {
+                currentQuality = qualityOpts[0].value;
+              }
+
+              populateOptions(sizeSel, sizeOpts, currentSize);
+              populateOptions(qualitySel, qualityOpts, currentQuality);
+              if (qualitySel) qualitySel.disabled = qualityDisabled;
+            };
+
+            modelSel?.addEventListener('change', e => {
+              currentModel = (e.target as HTMLSelectElement).value;
+              // Set sensible defaults for the new model, then repopulate the
+              // dependent select option lists in-place. The previous version
+              // only updated the `.value` field, which left the user with the
+              // wrong option list (and could leave the select with a value
+              // that wasn't in its options).
+              if (currentModel === 'dall-e-3') {
+                currentSize = '1024x1024';
+                currentQuality = 'standard';
+              } else if (currentModel === 'gpt-image-1') {
+                currentSize = '1024x1024';
+                currentQuality = 'medium';
+              } else {
+                currentSize = '1024x1024';
+                currentQuality = 'standard';
+              }
+              repopulateForModel();
+              updateCost();
+            });
+            sizeSel?.addEventListener('change', e => {
+              currentSize = (e.target as HTMLSelectElement).value;
+              updateCost();
+            });
+            qualitySel?.addEventListener('change', e => {
+              currentQuality = (e.target as HTMLSelectElement).value;
+              updateCost();
+            });
+            styleSel?.addEventListener('change', e => {
+              currentStyle = (e.target as HTMLSelectElement).value;
+              currentPrompt = buildPrompt(currentStyle);
+              if (promptArea) promptArea.value = currentPrompt;
+            });
+            promptArea?.addEventListener('input', e => {
+              currentPrompt = (e.target as HTMLTextAreaElement).value;
+            });
+          },
+          buttons: [
+            {
+              action: 'confirm',
+              label: '<i class="fas fa-check"></i> Confirm',
+              default: true,
+              callback: async (
+                _event: Event,
+                _button: HTMLButtonElement,
+                _dialog: any
+              ): Promise<PortraitGenerationResult> => {
+                const cost = PortraitConfirmationDialog.calculateCost(
+                  currentModel,
+                  currentSize,
+                  currentQuality
+                );
+                ui.notifications?.info(
+                  `Generating portrait... This will cost approximately $${cost.toFixed(3)} and may take 15-30 seconds.`,
+                  { permanent: false }
+                );
+
+                const contextWithOptions = {
+                  ...context,
+                  artStyle: currentStyle,
+                  dalleModel: currentModel,
+                  dalleSize: currentSize,
+                  dalleQuality: currentQuality,
+                  customPrompt: currentPrompt
+                };
+
+                const request: AIGenerationRequest = {
+                  type: 'portrait',
+                  context: contextWithOptions
+                };
+
+                const response: AIGenerationResponse = await AIService.generate(request);
+
+                if (!response.success) {
+                  ui.notifications?.error(
+                    response.error || 'Failed to generate portrait. Please try again.',
+                    { permanent: true }
+                  );
+                  return { success: false };
+                }
+
+                return { success: true, portraitPath: response.content as string };
+              }
+            },
+            {
+              action: 'cancel',
+              label: '<i class="fas fa-times"></i> Cancel',
+              callback: async (): Promise<PortraitGenerationResult> => ({
+                success: false,
+                cancelled: true
+              })
+            }
+          ]
+        });
+
+        // DialogV2.wait resolves with the callback's return value, or with the
+        // dialog instance itself if it was dismissed (rejectClose: false).
+        if (result && typeof result === 'object' && 'success' in result) {
+          return result as PortraitGenerationResult;
+        }
+        return { success: false, cancelled: true };
+      } catch (error: any) {
+        ui.notifications?.error(
+          error?.message || 'An unexpected error occurred. Please try again.',
+          { permanent: true }
+        );
+        return { success: false };
+      }
   }
 }

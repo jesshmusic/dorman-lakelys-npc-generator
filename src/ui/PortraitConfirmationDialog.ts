@@ -260,7 +260,10 @@ export class PortraitConfirmationDialog {
       // then attach native DOM listeners that update the cost label and
       // regenerate the prompt in-place when the user changes inputs. The
       // confirm button callback runs the generation and resolves the wait
-      // promise; on error we re-throw to keep the dialog open via rejectClose.
+      // promise; on error we surface a UI notification and resolve with
+      // `{ success: false }` so the dialog closes (the previous comment
+      // claimed the error path re-threw to keep the dialog open via
+      // rejectClose, but the current code does not do that).
       try {
         const result = await (foundry as any).applications.api.DialogV2.wait({
           window: { title: 'DALL-E Portrait Generation' },

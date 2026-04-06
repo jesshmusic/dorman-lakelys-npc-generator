@@ -12,7 +12,7 @@ type StorageSource = (typeof VALID_STORAGE_SOURCES)[number];
  * Falls back to the legacy global so this code keeps working on v13.
  */
 function getFilePicker(): any {
-  return (foundry as any).applications?.apps?.FilePicker ?? (FilePicker as any);
+  return (foundry as any).applications?.apps?.FilePicker ?? (globalThis as any).FilePicker;
 }
 
 export class ImageService {

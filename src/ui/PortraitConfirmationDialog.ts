@@ -290,9 +290,64 @@ export class PortraitConfirmationDialog {
               costEl.textContent = `$${c.toFixed(3)} USD`;
             };
 
+            // Helper: rebuild the size/quality <option> lists for the
+            // currently-selected model. Different models support different
+            // dimensions and quality tiers, so we have to repopulate (not just
+            // re-set the .value of) these selects when the model changes.
+            const populateOptions = (
+              select: HTMLSelectElement | null,
+              opts: ReadonlyArray<{ value: string; label: string }>,
+              selected: string
+            ) => {
+              if (!select) return;
+              select.innerHTML = opts
+                .map(
+                  o =>
+                    `<option value="${o.value}"${o.value === selected ? ' selected' : ''}>${o.label}</option>`
+                )
+                .join('');
+              select.value = selected;
+            };
+
+            const repopulateForModel = () => {
+              // Pick size + quality option lists for the current model.
+              let sizeOpts: ReadonlyArray<{ value: string; label: string }>;
+              let qualityOpts: ReadonlyArray<{ value: string; label: string }>;
+              let qualityDisabled = false;
+
+              if (currentModel === 'dall-e-3') {
+                sizeOpts = PortraitConfirmationDialog.SIZES_DALLE3;
+                qualityOpts = PortraitConfirmationDialog.QUALITY_DALLE3;
+              } else if (currentModel === 'gpt-image-1') {
+                sizeOpts = PortraitConfirmationDialog.SIZES_GPT4O;
+                qualityOpts = PortraitConfirmationDialog.QUALITY_GPT4O;
+              } else {
+                sizeOpts = PortraitConfirmationDialog.SIZES_DALLE2;
+                qualityOpts = PortraitConfirmationDialog.QUALITY_DALLE3; // unused
+                qualityDisabled = true;
+              }
+
+              // Make sure currentSize/currentQuality are still valid for the
+              // new model; if not, snap to the first option.
+              if (!sizeOpts.find(s => s.value === currentSize)) {
+                currentSize = sizeOpts[0].value;
+              }
+              if (!qualityOpts.find(q => q.value === currentQuality)) {
+                currentQuality = qualityOpts[0].value;
+              }
+
+              populateOptions(sizeSel, sizeOpts, currentSize);
+              populateOptions(qualitySel, qualityOpts, currentQuality);
+              if (qualitySel) qualitySel.disabled = qualityDisabled;
+            };
+
             modelSel?.addEventListener('change', e => {
               currentModel = (e.target as HTMLSelectElement).value;
-              // Reset size + quality to first valid option for new model
+              // Set sensible defaults for the new model, then repopulate the
+              // dependent select option lists in-place. The previous version
+              // only updated the `.value` field, which left the user with the
+              // wrong option list (and could leave the select with a value
+              // that wasn't in its options).
               if (currentModel === 'dall-e-3') {
                 currentSize = '1024x1024';
                 currentQuality = 'standard';
@@ -303,8 +358,7 @@ export class PortraitConfirmationDialog {
                 currentSize = '1024x1024';
                 currentQuality = 'standard';
               }
-              if (sizeSel) sizeSel.value = currentSize;
-              if (qualitySel) qualitySel.value = currentQuality;
+              repopulateForModel();
               updateCost();
             });
             sizeSel?.addEventListener('change', e => {

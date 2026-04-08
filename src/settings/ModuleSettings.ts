@@ -1,6 +1,82 @@
 // Module settings configuration
 const MODULE_ID = 'dorman-lakelys-npc-generator';
 
+/**
+ * Small ApplicationV2 subclasses whose only job is to immediately open a
+ * DialogV2 prompt pointing at Patreon / Dungeon Master Guru. Registered via
+ * `game.settings.registerMenu` so they show up as "Configure" entries in the
+ * standard Foundry Module Settings panel.
+ */
+const { ApplicationV2 } = (foundry as any).applications.api;
+const DialogV2 = (foundry as any).applications.api.DialogV2;
+
+class PatreonLink extends ApplicationV2 {
+  static DEFAULT_OPTIONS = {
+    id: 'npc-generator-patreon-link',
+    tag: 'div',
+    window: {
+      title: 'Support on Patreon',
+      icon: 'fab fa-patreon'
+    },
+    position: { width: 1, height: 1 }
+  } as const;
+
+  async _renderHTML(): Promise<HTMLElement> {
+    return document.createElement('div');
+  }
+
+  _replaceHTML(result: HTMLElement, content: HTMLElement): void {
+    content.replaceChildren(result);
+  }
+
+  async _onFirstRender(_context: unknown, _options: unknown): Promise<void> {
+    (this as any).element?.style?.setProperty('display', 'none');
+    await DialogV2.prompt({
+      window: { title: 'Support on Patreon' },
+      content: '<p>Open the Patreon page in a new tab.</p>',
+      ok: {
+        label: '<i class="fab fa-patreon"></i> Visit Patreon',
+        callback: () =>
+          window.open('https://www.patreon.com/c/DormanLakely', '_blank', 'noopener,noreferrer')
+      }
+    });
+    (this as any).close();
+  }
+}
+
+class DmGuruLink extends ApplicationV2 {
+  static DEFAULT_OPTIONS = {
+    id: 'npc-generator-dmguru-link',
+    tag: 'div',
+    window: {
+      title: 'Dungeon Master Guru',
+      icon: 'fas fa-dragon'
+    },
+    position: { width: 1, height: 1 }
+  } as const;
+
+  async _renderHTML(): Promise<HTMLElement> {
+    return document.createElement('div');
+  }
+
+  _replaceHTML(result: HTMLElement, content: HTMLElement): void {
+    content.replaceChildren(result);
+  }
+
+  async _onFirstRender(_context: unknown, _options: unknown): Promise<void> {
+    (this as any).element?.style?.setProperty('display', 'none');
+    await DialogV2.prompt({
+      window: { title: 'Dungeon Master Guru' },
+      content: '<p>Open the Dungeon Master Guru site in a new tab.</p>',
+      ok: {
+        label: '<i class="fas fa-dragon"></i> Visit Dungeon Master Guru',
+        callback: () => window.open('https://dungeonmaster.guru', '_blank', 'noopener,noreferrer')
+      }
+    });
+    (this as any).close();
+  }
+}
+
 export function registerSettings(): void {
   // AI Integration Settings
   (game.settings as any)?.register(MODULE_ID, 'enableAI', {
@@ -120,5 +196,24 @@ export function registerSettings(): void {
     type: Boolean,
     default: false,
     requiresReload: true
+  });
+
+  // Support / cross-promotion settings menu entries
+  (game.settings as any)?.registerMenu(MODULE_ID, 'patreonLink', {
+    name: 'Support on Patreon',
+    label: 'Visit Patreon',
+    hint: 'Support the development of this module on Patreon! Your contributions help fund new features and updates.',
+    icon: 'fab fa-patreon',
+    type: PatreonLink,
+    restricted: true
+  });
+
+  (game.settings as any)?.registerMenu(MODULE_ID, 'dmGuruLink', {
+    name: 'Dungeon Master Guru',
+    label: 'Visit Dungeon Master Guru',
+    hint: 'SRD rules and DM tools. Free resources for Dungeon Masters at dungeonmaster.guru.',
+    icon: 'fas fa-dragon',
+    type: DmGuruLink,
+    restricted: true
   });
 }

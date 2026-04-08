@@ -585,3 +585,76 @@
 .npcgen-cr-comparison .form-footer button {
   flex: 1;
 }
+
+/* ============================================
+   Patreon + Dungeon Master Guru cross-promotion footer
+   (same design as cartography's Map Gallery footer)
+   ============================================ */
+
+.npc-generator-form .npc-gen-footer-links {
+  display: flex;
+  gap: 12px;
+  margin-top: 1rem;
+}
+
+.npc-generator-form .npc-gen-patreon-link,
+.npc-generator-form .npc-gen-dmguru-link {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  text-decoration: none;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 13px;
+  text-align: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  border: 1px solid transparent;
+}
+
+.npc-generator-form .npc-gen-patreon-link i {
+  font-size: 18px;
+}
+
+/* Patreon: solid burgundy */
+.npc-generator-form .npc-gen-patreon-link {
+  background: #5b1d12;
+  color: #ffffff;
+  border-color: #5b1d12;
+}
+
+.npc-generator-form .npc-gen-patreon-link:hover,
+.npc-generator-form .npc-gen-patreon-link:focus-visible {
+  background: #7a2518;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+  color: #ffffff;
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* DM Guru: parchment cream + burgundy text + dragon logo */
+.npc-generator-form .npc-gen-dmguru-link {
+  background: #f9f1dc;
+  color: #5b1d12;
+  border-color: #645e56;
+}
+
+.npc-generator-form .npc-gen-dmguru-link:hover,
+.npc-generator-form .npc-gen-dmguru-link:focus-visible {
+  background: #ece1c0;
+  color: #9a2d1e;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+  outline: 2px solid #645e56;
+  outline-offset: 2px;
+}
+
+.npc-generator-form .npc-gen-dmguru-link .npc-gen-dmguru-logo {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.1] - 2026-04-08
+
+### Added
+
+- Branded `dungeonmaster.guru` cross-promotion card in the NPC Generator form, using the DM Guru logo and brand palette. Styles live in `styles/existential-npc-generator.css` scoped under `.npc-generator-form`.
+
 ## [1.5.0] - 2026-04-06
 
 ### Added
